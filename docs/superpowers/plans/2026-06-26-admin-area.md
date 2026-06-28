@@ -167,8 +167,8 @@ public function sync_privileges_writes_and_removes_allow_meta(): void
 public function set_meta_upserts_value(): void
 {
     $user = User::factory()->create();
-    $user->setMeta('firstname', 'Heinz');
-    $this->assertEquals('Heinz', $user->getMeta('firstname'));
+    $user->setMeta('firstname', 'Max');
+    $this->assertEquals('Max', $user->getMeta('firstname'));
     $user->setMeta('firstname', 'Karl');
     $this->assertEquals('Karl', $user->fresh()->getMeta('firstname'));
     $this->assertEquals(1, $user->meta()->where('key', 'firstname')->count());
