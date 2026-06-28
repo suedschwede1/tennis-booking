@@ -69,4 +69,20 @@ class SquareModelTest extends TestCase
         $this->assertFalse(Square::factory()->create(['status' => 'enabled'])->isDisabled());
         $this->assertFalse(Square::factory()->create(['status' => 'readonly'])->isDisabled());
     }
+
+    #[Test]
+    public function set_meta_creates_updates_and_deletes(): void
+    {
+        $square = Square::factory()->create();
+
+        $square->setMeta('alias', 'Garagenplatz');
+        $this->assertSame('Garagenplatz', $square->getMeta('alias'));
+
+        $square->setMeta('alias', 'Starplatz');
+        $this->assertSame('Starplatz', $square->getMeta('alias'));
+        $this->assertSame(1, SquareMeta::where('sid', $square->sid)->where('key', 'alias')->count());
+
+        $square->setMeta('alias', null);
+        $this->assertNull($square->fresh()->getMeta('alias'));
+    }
 }
