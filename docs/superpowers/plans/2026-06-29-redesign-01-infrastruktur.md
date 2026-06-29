@@ -282,32 +282,39 @@ git commit -m "feat: Google Fonts + Vite-Pipeline in app.blade.php eingebunden"
 
 ---
 
-### Task 7: Build testen
+### Task 7: `.gitignore` anpassen und Build committen
 
-**Files:** keine Änderungen
+**Wichtig:** Das Projekt läuft auf **one.com Shared Hosting** (kein Node.js auf dem Server). Der Vite-Build muss lokal ausgeführt und `public/build/` committed werden — nur so landet er am Server.
 
-- [ ] **Schritt 1: npm build ausführen**
+**Files:**
+- Modify: `.gitignore`
+
+- [ ] **Schritt 1: `public/build` aus `.gitignore` entfernen**
+
+Lies `.gitignore`. Entferne die Zeile `/public/build` (aktuell Zeile 17).
+
+- [ ] **Schritt 2: `npm run build` ausführen**
 
 ```bash
 cd C:\development\bookingnew
 npm run build
 ```
 
-Erwartung: Kein Fehler. Output enthält `resources/css/app.css` und `resources/js/app.js` unter `public/build/`.
+Erwartung: Kein Fehler. Output enthält gehashte `.css` und `.js` Dateien unter `public/build/assets/` sowie `public/build/manifest.json`.
 
-- [ ] **Schritt 2: Build-Output prüfen**
+- [ ] **Schritt 3: Build-Output prüfen**
 
 ```bash
 ls public/build/assets/
 ```
 
-Erwartung: Mindestens eine `.css` Datei und eine `.js` Datei vorhanden.
+Erwartung: Mindestens eine Datei wie `app-[hash].css` und `app-[hash].js` sichtbar.
 
-- [ ] **Schritt 3: Abschließender Commit**
+- [ ] **Schritt 4: Alles committen**
 
 ```bash
-git add public/build/
-git commit -m "chore: initialer Vite-Build (Infrastruktur)"
+git add .gitignore public/build/
+git commit -m "chore: public/build aus .gitignore entfernt, initialer Vite-Build committed"
 ```
 
 ---
@@ -320,3 +327,13 @@ Nach `npm run dev` im Browser prüfen:
 2. **Alpine.js aktiv:** Browser-Konsole → `window.Alpine` → gibt Alpine-Objekt zurück (kein `undefined`)
 3. **CSS-Variable gesetzt:** Browser-Konsole → `getComputedStyle(document.documentElement).getPropertyValue('--color-accent-600')` → gibt oklch-Wert zurück
 4. **Kalender unverändert:** Kalender-Grid wird korrekt dargestellt, keine visuellen Regressionen
+
+## Deployment-Workflow (one.com)
+
+Nach jedem Vite-relevanten Commit:
+```bash
+npm run build
+git add public/build/
+git commit -m "chore: Vite-Build aktualisiert"
+# dann per FTP public/build/ auf den Server übertragen
+```
