@@ -1,6 +1,6 @@
-# ASV Bewegung – Booking System (bookingnew)
+# Tennis Booking System
 
-Laravel-based court booking system for the ASV Bewegung tennis club.
+Laravel-based court booking system for a tennis club.
 Replaces the old Zend/Laminas system (`booking`).
 
 ## Stack
