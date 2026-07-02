@@ -706,6 +706,7 @@ return new class extends Migration
     {
         Schema::create('members', function (Blueprint $table) {
             $table->id();
+            $table->unsignedInteger('member_number')->unique();
             $table->string('firstname', 128);
             $table->string('lastname', 128);
             $table->date('birthdate')->nullable();
@@ -745,7 +746,7 @@ class Member extends Model
     use HasFactory;
 
     protected $fillable = [
-        'firstname', 'lastname', 'birthdate', 'email', 'phone', 'address', 'joined_at', 'left_at',
+        'member_number', 'firstname', 'lastname', 'birthdate', 'email', 'phone', 'address', 'joined_at', 'left_at',
     ];
 
     protected $casts = [
@@ -778,6 +779,12 @@ class Member extends Model
     {
         return trim("{$this->firstname} {$this->lastname}");
     }
+
+    /** Next free member_number, for pre-filling the create form (max existing + 1, or 1 if none exist). */
+    public static function nextNumber(): int
+    {
+        return (int) (static::query()->max('member_number') ?? 0) + 1;
+    }
 }
 ```
 
@@ -800,6 +807,7 @@ class MemberFactory extends Factory
     public function definition(): array
     {
         return [
+            'member_number' => $this->faker->unique()->numberBetween(1, 999999),
             'firstname' => $this->faker->firstName(),
             'lastname' => $this->faker->lastName(),
             'birthdate' => $this->faker->optional()->date(),
@@ -1379,13 +1387,36 @@ Append to `tests/Feature/Modules/Members/MemberManagementTest.php`:
     public function admin_can_create_a_member(): void
     {
         $this->actingAs($this->admin())->post('/admin/members', [
+            'member_number' => 1,
             'firstname' => 'Neu',
             'lastname' => 'Mitglied',
             'email' => 'neu@example.com',
             'joined_at' => '2026-01-01',
         ])->assertRedirect(route('admin.members.index'));
 
-        $this->assertDatabaseHas('members', ['firstname' => 'Neu', 'lastname' => 'Mitglied']);
+        $this->assertDatabaseHas('members', ['member_number' => 1, 'firstname' => 'Neu', 'lastname' => 'Mitglied']);
+    }
+
+    #[Test]
+    public function create_form_prefills_the_next_free_member_number(): void
+    {
+        \App\Modules\Members\Models\Member::factory()->create(['member_number' => 5]);
+
+        $this->actingAs($this->admin())->get('/admin/members/create')
+            ->assertOk()->assertSee('value="6"', false);
+    }
+
+    #[Test]
+    public function creating_a_member_with_a_duplicate_number_fails_validation(): void
+    {
+        \App\Modules\Members\Models\Member::factory()->create(['member_number' => 7]);
+
+        $this->actingAs($this->admin())->post('/admin/members', [
+            'member_number' => 7,
+            'firstname' => 'Doppelt',
+            'lastname' => 'Vergeben',
+            'joined_at' => '2026-01-01',
+        ])->assertSessionHasErrors('member_number');
     }
 
     #[Test]
@@ -1441,12 +1472,13 @@ class MemberController
 
     public function create(): View
     {
-        return view('members::members.create');
+        return view('members::members.create', ['nextNumber' => Member::nextNumber()]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
+            'member_number' => ['required', 'integer', 'min:1', 'unique:members,member_number'],
             'firstname' => ['required', 'string', 'max:128'],
             'lastname' => ['required', 'string', 'max:128'],
             'birthdate' => ['nullable', 'date'],
@@ -1469,6 +1501,7 @@ class MemberController
     public function update(Request $request, Member $member): RedirectResponse
     {
         $validated = $request->validate([
+            'member_number' => ['required', 'integer', 'min:1', 'unique:members,member_number,'.$member->id],
             'firstname' => ['required', 'string', 'max:128'],
             'lastname' => ['required', 'string', 'max:128'],
             'birthdate' => ['nullable', 'date'],
@@ -1502,6 +1535,10 @@ class MemberController
     <div class="ui-card-header"><h2>{{ __('members::admin.members.section') }}</h2></div>
     <div class="ui-card-body ui-stack">
         <div class="ui-grid-3 ui-form-panel">
+            <div class="ui-field">
+                <label class="ui-label" for="mf-member-number">{{ __('members::admin.members.member_number') }}</label>
+                <input id="mf-member-number" type="number" min="1" name="member_number" value="{{ old('member_number', $member->member_number ?? $nextNumber ?? '') }}" class="ui-input">
+            </div>
             <div class="ui-field">
                 <label class="ui-label" for="mf-firstname">{{ __('members::admin.members.firstname') }}</label>
                 <input id="mf-firstname" type="text" name="firstname" value="{{ old('firstname', $member->firstname ?? '') }}" class="ui-input">
@@ -1546,7 +1583,7 @@ class MemberController
         <h1>{{ __('members::admin.members.new_member') }}</h1>
     </div>
     <form method="POST" action="{{ route('admin.members.store') }}" class="ui-form-shell">
-        @include('members::members._form')
+        @include('members::members._form', ['nextNumber' => $nextNumber])
         <div class="ui-form-actions">
             <a href="{{ route('admin.members.index') }}" class="ui-btn ui-btn-ghost">{{ __('members::admin.common.cancel') }}</a>
             <button type="submit" class="ui-btn ui-btn-primary">{{ __('members::admin.common.save') }}</button>
@@ -1614,6 +1651,7 @@ class MemberController
             <table class="ui-table">
                 <thead>
                     <tr>
+                        <th>{{ __('members::admin.members.member_number') }}</th>
                         <th>{{ __('members::admin.members.name') }}</th>
                         <th>{{ __('members::admin.members.email') }}</th>
                         <th>{{ __('members::admin.members.joined_at') }}</th>
@@ -1623,6 +1661,7 @@ class MemberController
                 <tbody>
                     @foreach($members as $member)
                         <tr>
+                            <td class="text-[#6a6e73]">{{ $member->member_number }}</td>
                             <td class="font-medium">{{ $member->fullName() }}</td>
                             <td class="text-[#6a6e73]">{{ $member->email ?: '—' }}</td>
                             <td class="text-[#6a6e73]">{{ $member->joined_at->format('d.m.Y') }}</td>
@@ -1660,6 +1699,7 @@ return [
         'title' => 'Mitglieder',
         'new_member' => 'Neues Mitglied',
         'section' => 'Mitgliedsdaten',
+        'member_number' => 'Mitgliedsnummer',
         'firstname' => 'Vorname',
         'lastname' => 'Nachname',
         'birthdate' => 'Geburtsdatum',
@@ -1700,6 +1740,7 @@ return [
         'title' => 'Members',
         'new_member' => 'New member',
         'section' => 'Member details',
+        'member_number' => 'Member number',
         'firstname' => 'First name',
         'lastname' => 'Last name',
         'birthdate' => 'Date of birth',
