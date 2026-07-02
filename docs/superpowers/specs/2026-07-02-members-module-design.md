@@ -38,9 +38,12 @@ Alle Tabellen unter `App\Modules\Members\Models`, Migrations unter `app/Modules/
 
 ```
 members
-  id, firstname, lastname, birthdate (nullable), email (nullable),
+  id, member_number (unique), firstname, lastname, birthdate (nullable), email (nullable),
   phone (nullable), address (nullable),
   joined_at, left_at (nullable), created_at, updated_at
+  -- member_number wird beim Anlegen automatisch auf (aktuelles Maximum + 1) vorbelegt,
+     ist aber im Formular editierbar (z.B. um Nummern aus einer Alt-Liste zu übernehmen);
+     muss eindeutig bleiben
 
 fiscal_years
   id, name (z.B. "2025/26"), starts_on, ends_on
