@@ -70,8 +70,22 @@ des Mitglieds das Kategorie-Select. Der Wert bleibt pro Vorschreibung überschre
 
 ## 6. Mitgliederliste (`members/index`)
 
-Neue Spalte „Beitragskategorie" (Name der Standard-Kategorie, leer wenn keine gesetzt).
-Eager Loading (`with('feeCategory')`) im Index.
+Neue Spalten:
+
+- **Beitragskategorie** — Name der Standard-Kategorie, leer wenn keine gesetzt.
+  Eager Loading (`with('feeCategory')`) im Index.
+- **Alter** — berechnet aus `birthdate` (`$member->birthdate?->age`), leer wenn kein
+  Geburtsdatum. Keine neue Spalte in der DB, Accessor `age()` am Model.
+
+Neue Filterleiste oberhalb der Tabelle (GET-Formular, kombinierbar mit dem
+bestehenden Status-Filter aktiv/ausgetreten):
+
+- **Namenssuche** — Textfeld `search`; filtert `firstname` ODER `lastname`
+  mit `LIKE %…%` (Groß-/Kleinschreibung egal).
+- **Beitragskategorie** — Select `fee_category` mit allen Kategorien plus
+  „Alle"; filtert auf `fee_category_id`.
+
+Die Filter bleiben in der URL erhalten (Query-Parameter), damit Links teilbar sind.
 
 ## 7. Tests
 
@@ -79,6 +93,8 @@ Eager Loading (`with('feeCategory')`) im Index.
 - Mitglieder-CRUD-Tests: neue Felder in store/update, Validierung (gender in-Liste, nuliga_id unique).
 - Migrations-Split: Test für das Address-Parsing (inkl. nicht parsebarer Wert → alles in `street`).
 - Dues-Formular: Vorbefüllung der Kategorie (data-Attribut vorhanden).
+- Mitgliederliste: Namenssuche (Vor- und Nachname), Kategorie-Filter,
+  Alter-Berechnung, Kombination mit Status-Filter.
 
 ## Nicht im Scope
 
