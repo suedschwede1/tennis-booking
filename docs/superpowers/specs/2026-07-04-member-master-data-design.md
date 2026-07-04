@@ -87,7 +87,24 @@ bestehenden Status-Filter aktiv/ausgetreten):
 
 Die Filter bleiben in der URL erhalten (Query-Parameter), damit Links teilbar sind.
 
-## 7. Tests
+## 7. Inline-Bearbeitung in der Liste
+
+Der „Bearbeiten"-Button in der Mitgliederliste öffnet keinen eigenen Screen mehr,
+sondern klappt die Zeile in der Tabelle zu einem Editor auf:
+
+- Link führt auf `/members?edit={id}` (Filter-Query-Parameter bleiben erhalten).
+- Die Zeile des Mitglieds wird durch eine `<td colspan>`-Zelle ersetzt, die das
+  Formular-Partial `members/_form.blade.php` (alle Felder, gruppiert) in einem
+  `<form method="POST">` mit `@method('PUT')` auf `members.update` rendert.
+- Aktive Filter (`status`, `search`, `fee_category`) werden als Hidden-Fields
+  `filters[...]` mitgeschickt; `update()` leitet danach auf die Liste mit genau
+  diesen Filtern zurück. „Abbrechen" verlinkt ebenfalls auf die gefilterte Liste.
+- Validierungsfehler führen wie üblich per Redirect zurück auf die
+  `?edit={id}`-URL; `old()` befüllt die Felder erneut.
+- Kein JavaScript, keine neuen Routen/Endpoints. Die separate Edit-Seite
+  (`members.edit`) bleibt als Route bestehen, wird aber nicht mehr verlinkt.
+
+## 8. Tests
 
 - Import-Test: Assertions für `street`/`zip`/`city`, `gender`, `nuliga_id`, `fee_category_id`.
 - Mitglieder-CRUD-Tests: neue Felder in store/update, Validierung (gender in-Liste, nuliga_id unique).
@@ -95,6 +112,8 @@ Die Filter bleiben in der URL erhalten (Query-Parameter), damit Links teilbar si
 - Dues-Formular: Vorbefüllung der Kategorie (data-Attribut vorhanden).
 - Mitgliederliste: Namenssuche (Vor- und Nachname), Kategorie-Filter,
   Alter-Berechnung, Kombination mit Status-Filter.
+- Inline-Bearbeitung: `?edit={id}` rendert das Formular in der Tabelle,
+  Update aus der Liste leitet mit erhaltenen Filtern zurück.
 
 ## Nicht im Scope
 

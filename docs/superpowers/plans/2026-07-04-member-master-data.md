@@ -893,7 +893,127 @@ git commit -m "Prefill due form category from the member's default fee category"
 
 ---
 
-### Task 8: Gesamtlauf + lokale Migration
+### Task 8: Inline-Bearbeitung in der Mitgliederliste
+
+**Files:**
+- Modify: `app/Modules/Members/Http/Controllers/MemberController.php` (`index()`, `update()`)
+- Modify: `app/Modules/Members/resources/views/members/index.blade.php`
+- Test: `tests/Feature/Modules/Members/MemberManagementTest.php`
+
+- [ ] **Step 1: Write the failing tests**
+
+```php
+#[Test]
+public function the_index_renders_an_inline_edit_form_for_the_requested_member(): void
+{
+    FeeCategory::create(['name' => 'Vollzahler']);
+    $member = Member::factory()->create(['firstname' => 'Anna', 'lastname' => 'Muster']);
+
+    $this->actingAs($this->admin())->get("/members?edit={$member->id}")
+        ->assertOk()
+        ->assertSee('action="'.route('members.update', $member).'"', false)
+        ->assertSee('value="Anna"', false);
+}
+
+#[Test]
+public function updating_from_the_list_redirects_back_with_the_active_filters(): void
+{
+    $member = Member::factory()->create(['firstname' => 'Anna', 'lastname' => 'Muster', 'member_number' => 3]);
+
+    $this->actingAs($this->admin())->put("/members/{$member->id}", [
+        'member_number' => 3,
+        'firstname' => 'Anna',
+        'lastname' => 'Musterfrau',
+        'joined_at' => '2026-01-01',
+        'filters' => ['search' => 'must', 'status' => '', 'fee_category' => ''],
+    ])->assertRedirect(route('members.index', ['search' => 'must']));
+
+    $this->assertSame('Musterfrau', $member->fresh()->lastname);
+}
+```
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `wsl php artisan test --filter=MemberManagementTest`
+Expected: FAIL — kein Inline-Formular im HTML, Redirect geht auf die ungefilterte Liste.
+
+- [ ] **Step 3: Update the controller**
+
+In `index()` dem View-Array einen Eintrag hinzufügen:
+
+```php
+'editing' => $request->integer('edit') ?: null,
+```
+
+In `update()` die Redirect-Zeile ersetzen durch:
+
+```php
+$filters = array_filter(
+    (array) $request->input('filters', []),
+    fn ($value) => $value !== null && $value !== '',
+);
+
+return redirect()->route('members.index', $filters);
+```
+
+- [ ] **Step 4: Update the index view** — den `<tr>`-Block in der `@foreach`-Schleife ersetzen durch (colspan = Spaltenanzahl der Tabelle, nach Task 5 sind das 7):
+
+```blade
+@if(($editing ?? null) === $member->id)
+    <tr>
+        <td colspan="7">
+            <form method="POST" action="{{ route('members.update', $member) }}" class="ui-stack">
+                @method('PUT')
+                @foreach(array_filter($filters, fn ($value) => $value !== null && $value !== '') as $key => $value)
+                    <input type="hidden" name="filters[{{ $key }}]" value="{{ $value }}">
+                @endforeach
+                @include('members::members._form')
+                <div class="ui-form-actions">
+                    <a href="{{ route('members.index', array_filter($filters)) }}" class="ui-btn ui-btn-ghost">{{ __('members::admin.common.cancel') }}</a>
+                    <button type="submit" class="ui-btn ui-btn-primary">{{ __('members::admin.common.save') }}</button>
+                </div>
+            </form>
+        </td>
+    </tr>
+@else
+    <tr>
+        <td class="text-[#6a6e73]">{{ $member->member_number }}</td>
+        <td class="font-medium">{{ $member->fullName() }}</td>
+        <td class="text-[#6a6e73]">{{ $member->age() ?? '—' }}</td>
+        <td class="text-[#6a6e73]">{{ $member->feeCategory->name ?? '—' }}</td>
+        <td class="text-[#6a6e73]">{{ $member->email ?: '—' }}</td>
+        <td class="text-[#6a6e73]">{{ $member->joined_at->format('d.m.Y') }}</td>
+        <td>
+            <div class="flex items-center justify-end gap-2 whitespace-nowrap">
+                <a href="{{ route('members.index', array_merge(array_filter($filters), ['edit' => $member->id])) }}" class="ui-btn ui-btn-ghost">{{ __('members::admin.common.edit') }}</a>
+                <form method="POST" action="{{ route('members.destroy', $member) }}" onsubmit="return confirm({{ Js::from(__('members::admin.members.confirm_leave')) }})">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="ui-btn ui-btn-ghost">{{ __('members::admin.members.mark_departed') }}</button>
+                </form>
+            </div>
+        </td>
+    </tr>
+@endif
+```
+
+Hinweis: `_form.blade.php` beginnt mit `@csrf` und nutzt `$member` (Loop-Variable) sowie `$feeCategories` (kommt seit Task 5 aus `index()`) — es sind keine weiteren Variablen nötig. Der „Bearbeiten"-Link zeigt jetzt auf die Inline-Ansicht; die Route `members.edit` bleibt bestehen, wird aber nicht mehr verlinkt.
+
+- [ ] **Step 5: Run tests to verify they pass**
+
+Run: `wsl php artisan test --filter=MemberManagementTest`
+Expected: PASS
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add app/Modules/Members/Http/Controllers/MemberController.php app/Modules/Members/resources/views/members/index.blade.php tests/Feature/Modules/Members/MemberManagementTest.php
+git commit -m "Allow editing members inline in the list view"
+```
+
+---
+
+### Task 9: Gesamtlauf + lokale Migration
 
 - [ ] **Step 1: Run the full members test suite**
 
