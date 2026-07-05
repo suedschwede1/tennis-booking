@@ -4,7 +4,7 @@
 
 **Goal:** Require a 6-digit email code to complete a login only when it looks risky (unusual country, repeated recent failures, or impossible travel), backed by a new 30-day `login_history` table — normal logins are unaffected.
 
-**Architecture:** A new `login_history` table records every login attempt (success/failed/throttled) for resolved users. `LoginController` evaluates 3 risk signals against that history right after the password check succeeds; if any fire, it logs the user back out, stashes a hashed one-time code + redirect target in the session, and redirects to a new `LoginVerificationController` that owns the code-entry/resend flow. A `GeoLookup` service centralizes country resolution and fails open whenever the MaxMind `.mmdb` file is missing (untracked, per-deployment). A small `LoginBookkeeping` service extracts the existing legacy-tracking/log-attempt logic so both controllers can share it.
+**Architecture:** A new `login_history` table records every login attempt (success/failed/throttled) for resolved users, including which risk triggers (if any) fired. `LoginController` evaluates 3 risk signals against that history right after the password check succeeds; if any fire, it logs the user back out, stashes a hashed one-time code + redirect target in the session, and redirects to a new `LoginVerificationController` that owns the code-entry/resend flow. A `GeoLookup` service centralizes country resolution and fails open whenever the MaxMind `.mmdb` file is missing (untracked, per-deployment). A small `LoginBookkeeping` service extracts the existing legacy-tracking/log-attempt logic so both controllers can share it. The admin login-history page additionally shows a display-only "risk score" (30-day sum of fired triggers) — computed on read from `login_history`, not stored anywhere, and doesn't change any behavior.
 
 **Tech Stack:** Laravel 13, PHPUnit with `#[Test]` attributes, `stevebauman/location` (MaxMind driver), SQLite for tests (`LazilyRefreshDatabase`).
 
@@ -17,9 +17,9 @@
 | File | Responsibility |
 |---|---|
 | `database/migrations/2026_07_05_100001_create_login_history_table.php` | Creates `login_history` |
-| `app/Models/LoginHistory.php` | Model + `record()` helper (insert + 30-day prune) |
+| `app/Models/LoginHistory.php` | Model + `record()` helper (insert + 30-day prune), stores which flags fired |
 | `app/Services/GeoLookup.php` | Country resolution, gated on the MaxMind file existing, fail-open |
-| `app/Services/LoginRiskEvaluator.php` | The 3 risk triggers, reading `login_history` |
+| `app/Services/LoginRiskEvaluator.php` | The 3 risk triggers; `triggeredFlags()` returns which ones fired |
 | `app/Services/LoginBookkeeping.php` | `syncLegacyLoginTracking()` + `logAttempt()`, extracted from `LoginController` |
 | `app/Http/Controllers/Auth/LoginController.php` | Modified: wires geo lookup, risk check, history writes, pending-verification handoff |
 | `app/Http/Controllers/Auth/LoginVerificationController.php` | New: show/verify/resend the pending code |
@@ -68,6 +68,7 @@ return new class extends Migration
             $table->string('ip', 45);
             $table->string('country_code', 2)->nullable();
             $table->string('status', 16);
+            $table->string('risk_flags', 128)->nullable();
             $table->timestamp('created_at')->nullable()->index();
             $table->index(['user_id', 'created_at'], 'login_history_user_id_created_at_index');
         });
@@ -109,6 +110,18 @@ class LoginHistoryTest extends TestCase
             'ip' => '127.0.0.1',
             'country_code' => 'AT',
             'status' => 'success',
+            'risk_flags' => null,
+        ]);
+    }
+
+    #[Test]
+    public function record_stores_the_given_risk_flags(): void
+    {
+        LoginHistory::record(1, '127.0.0.1', 'RU', 'success', ['unusual_country', 'impossible_travel']);
+
+        $this->assertDatabaseHas('login_history', [
+            'user_id' => 1,
+            'risk_flags' => 'unusual_country,impossible_travel',
         ]);
     }
 
@@ -148,6 +161,28 @@ class LoginHistoryTest extends TestCase
 
         Carbon::setTestNow();
     }
+
+    #[Test]
+    public function risk_score_sums_flags_across_rows_in_the_last_30_days(): void
+    {
+        LoginHistory::record(1, '127.0.0.1', 'RU', 'success', ['unusual_country', 'impossible_travel']);
+        LoginHistory::record(1, '127.0.0.1', 'AT', 'success', ['recent_failed_attempts']);
+        LoginHistory::record(1, '127.0.0.1', 'AT', 'success');
+
+        $this->assertSame(3, LoginHistory::riskScore(1));
+    }
+
+    #[Test]
+    public function risk_score_ignores_rows_older_than_30_days(): void
+    {
+        Carbon::setTestNow('2026-01-01 12:00:00');
+        LoginHistory::record(1, '127.0.0.1', 'RU', 'success', ['unusual_country']);
+
+        Carbon::setTestNow('2026-02-05 12:00:00');
+        $this->assertSame(0, LoginHistory::riskScore(1));
+
+        Carbon::setTestNow();
+    }
 }
 ```
 
@@ -170,26 +205,29 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * One row per login attempt (success/failed/throttled) for a resolved user —
  * unmatched emails aren't recorded, there's no account/baseline to protect.
- * Feeds App\Services\LoginRiskEvaluator. Retention: 30 days, pruned
- * opportunistically on every insert (no cron on one.com).
+ * Feeds App\Services\LoginRiskEvaluator, and the admin-only, display-only risk
+ * score (riskScore()). Retention: 30 days, pruned opportunistically on every
+ * insert (no cron on one.com).
  *
  * @property int $id
  * @property int $user_id
  * @property string $ip
  * @property string|null $country_code
  * @property string $status success|failed|throttled
+ * @property string|null $risk_flags comma-separated trigger names, only ever set on success rows
  */
 class LoginHistory extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = ['user_id', 'ip', 'country_code', 'status', 'created_at'];
+    protected $fillable = ['user_id', 'ip', 'country_code', 'status', 'risk_flags', 'created_at'];
 
     protected $casts = [
         'created_at' => 'datetime',
     ];
 
-    public static function record(?int $userId, string $ip, ?string $countryCode, string $status): void
+    /** @param array<int, string> $riskFlags */
+    public static function record(?int $userId, string $ip, ?string $countryCode, string $status, array $riskFlags = []): void
     {
         if ($userId === null) {
             return;
@@ -200,6 +238,7 @@ class LoginHistory extends Model
             'ip' => $ip,
             'country_code' => $countryCode,
             'status' => $status,
+            'risk_flags' => $riskFlags === [] ? null : implode(',', $riskFlags),
             'created_at' => now(),
         ]);
 
@@ -208,13 +247,24 @@ class LoginHistory extends Model
             ->where('created_at', '<', now()->subDays(30))
             ->delete();
     }
+
+    /** Display-only: total number of individual risk flags fired in the last 30 days. */
+    public static function riskScore(int $userId): int
+    {
+        return self::query()
+            ->where('user_id', $userId)
+            ->where('created_at', '>=', now()->subDays(30))
+            ->whereNotNull('risk_flags')
+            ->get()
+            ->sum(fn (self $row): int => count(explode(',', (string) $row->risk_flags)));
+    }
 }
 ```
 
 - [ ] **Step 5: Run the test to verify it passes**
 
 Run: `wsl php artisan test tests/Unit/Models/LoginHistoryTest.php`
-Expected: PASS (4 tests)
+Expected: PASS (8 tests)
 
 - [ ] **Step 6: Commit**
 
@@ -248,6 +298,7 @@ In `app/Services/DatabaseSchemaChecker.php`, inside `columnDefinitions()`, add a
                 'ip' => fn (Blueprint $t) => $t->string('ip', 45),
                 'country_code' => fn (Blueprint $t) => $t->string('country_code', 2)->nullable(),
                 'status' => fn (Blueprint $t) => $t->string('status', 16),
+                'risk_flags' => fn (Blueprint $t) => $t->string('risk_flags', 128)->nullable(),
                 'created_at' => fn (Blueprint $t) => $t->timestamp('created_at')->nullable()->index(),
             ],
 ```
@@ -482,6 +533,7 @@ class LoginRiskEvaluatorTest extends TestCase
     #[Test]
     public function first_ever_login_is_never_suspicious(): void
     {
+        $this->assertSame([], $this->evaluator->triggeredFlags(1, 'AT'));
         $this->assertFalse($this->evaluator->isSuspicious(1, 'AT'));
     }
 
@@ -490,7 +542,7 @@ class LoginRiskEvaluatorTest extends TestCase
     {
         LoginHistory::record(1, '1.1.1.1', 'AT', 'success');
 
-        $this->assertFalse($this->evaluator->isSuspicious(1, 'AT'));
+        $this->assertSame([], $this->evaluator->triggeredFlags(1, 'AT'));
     }
 
     #[Test]
@@ -498,6 +550,7 @@ class LoginRiskEvaluatorTest extends TestCase
     {
         LoginHistory::record(1, '1.1.1.1', 'AT', 'success');
 
+        $this->assertSame(['unusual_country'], $this->evaluator->triggeredFlags(1, 'RU'));
         $this->assertTrue($this->evaluator->isSuspicious(1, 'RU'));
     }
 
@@ -506,7 +559,7 @@ class LoginRiskEvaluatorTest extends TestCase
     {
         LoginHistory::record(1, '1.1.1.1', 'AT', 'success');
 
-        $this->assertFalse($this->evaluator->isSuspicious(1, null));
+        $this->assertSame([], $this->evaluator->triggeredFlags(1, null));
     }
 
     #[Test]
@@ -515,7 +568,7 @@ class LoginRiskEvaluatorTest extends TestCase
         LoginHistory::record(1, '1.1.1.1', 'AT', 'failed');
         LoginHistory::record(1, '1.1.1.1', 'AT', 'failed');
 
-        $this->assertTrue($this->evaluator->isSuspicious(1, null));
+        $this->assertSame(['recent_failed_attempts'], $this->evaluator->triggeredFlags(1, null));
     }
 
     #[Test]
@@ -523,7 +576,7 @@ class LoginRiskEvaluatorTest extends TestCase
     {
         LoginHistory::record(1, '1.1.1.1', 'AT', 'failed');
 
-        $this->assertFalse($this->evaluator->isSuspicious(1, null));
+        $this->assertSame([], $this->evaluator->triggeredFlags(1, null));
     }
 
     #[Test]
@@ -534,7 +587,7 @@ class LoginRiskEvaluatorTest extends TestCase
         LoginHistory::record(1, '1.1.1.1', 'AT', 'failed');
 
         Carbon::setTestNow('2026-01-01 12:00:00');
-        $this->assertFalse($this->evaluator->isSuspicious(1, null));
+        $this->assertSame([], $this->evaluator->triggeredFlags(1, null));
 
         Carbon::setTestNow();
     }
@@ -546,7 +599,10 @@ class LoginRiskEvaluatorTest extends TestCase
         LoginHistory::record(1, '1.1.1.1', 'AT', 'success');
 
         Carbon::setTestNow('2026-01-01 12:00:00');
-        $this->assertTrue($this->evaluator->isSuspicious(1, 'RU'));
+        $flags = $this->evaluator->triggeredFlags(1, 'RU');
+
+        $this->assertContains('impossible_travel', $flags);
+        $this->assertContains('unusual_country', $flags);
 
         Carbon::setTestNow();
     }
@@ -558,7 +614,7 @@ class LoginRiskEvaluatorTest extends TestCase
         LoginHistory::record(1, '1.1.1.1', 'AT', 'success');
 
         Carbon::setTestNow('2026-01-03 10:00:00');
-        $this->assertTrue($this->evaluator->isSuspicious(1, 'RU'));
+        $this->assertSame(['unusual_country'], $this->evaluator->triggeredFlags(1, 'RU'));
 
         Carbon::setTestNow();
     }
@@ -573,7 +629,7 @@ class LoginRiskEvaluatorTest extends TestCase
         LoginHistory::record(1, '1.1.1.1', 'RU', 'success');
 
         Carbon::setTestNow('2026-01-03 10:00:00');
-        $this->assertFalse($this->evaluator->isSuspicious(1, 'AT'));
+        $this->assertSame([], $this->evaluator->triggeredFlags(1, 'AT'));
 
         Carbon::setTestNow();
     }
@@ -600,6 +656,8 @@ use App\Models\LoginHistory;
  * Decides whether a just-password-verified login looks risky enough to require
  * an email verification code, based on the user's login_history (30-day
  * retention, see App\Models\LoginHistory). Any one signal is enough to trigger.
+ * triggeredFlags() returns which ones fired (persisted onto the login_history
+ * row by the caller, purely for the admin-only risk score display).
  */
 final class LoginRiskEvaluator
 {
@@ -613,9 +671,27 @@ final class LoginRiskEvaluator
 
     public function isSuspicious(int $userId, ?string $countryCode): bool
     {
-        return $this->hasUnusualCountry($userId, $countryCode)
-            || $this->hasRecentFailedAttempts($userId)
-            || $this->hasImpossibleTravel($userId, $countryCode);
+        return $this->triggeredFlags($userId, $countryCode) !== [];
+    }
+
+    /** @return array<int, string> subset of unusual_country|recent_failed_attempts|impossible_travel */
+    public function triggeredFlags(int $userId, ?string $countryCode): array
+    {
+        $flags = [];
+
+        if ($this->hasUnusualCountry($userId, $countryCode)) {
+            $flags[] = 'unusual_country';
+        }
+
+        if ($this->hasRecentFailedAttempts($userId)) {
+            $flags[] = 'recent_failed_attempts';
+        }
+
+        if ($this->hasImpossibleTravel($userId, $countryCode)) {
+            $flags[] = 'impossible_travel';
+        }
+
+        return $flags;
     }
 
     private function hasUnusualCountry(int $userId, ?string $countryCode): bool
@@ -1089,6 +1165,28 @@ use Illuminate\Support\Facades\Session;
     }
 
     #[Test]
+    public function login_history_records_which_risk_flags_fired(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'test@example.com',
+            'pw' => bcrypt('secret123'),
+            'status' => 'enabled',
+        ]);
+
+        Location::fake(['127.0.0.1' => Position::make(['countryCode' => 'AT'])]);
+        LoginHistory::record((int) $user->uid, '1.1.1.1', 'AT', 'success');
+        Location::fake(['127.0.0.1' => Position::make(['countryCode' => 'RU'])]);
+
+        $this->post('/login', ['email' => 'test@example.com', 'password' => 'secret123']);
+
+        $this->assertDatabaseHas('login_history', [
+            'user_id' => $user->uid,
+            'status' => 'success',
+            'risk_flags' => 'unusual_country,impossible_travel',
+        ]);
+    }
+
+    #[Test]
     public function login_history_records_a_failed_attempt_for_a_known_user(): void
     {
         $user = User::factory()->create([
@@ -1245,11 +1343,11 @@ final class LoginController extends Controller
         $wasKnownIp = $this->wasKnownIp($user, $ip);
         $rememberApplied = $request->boolean('remember') && ! $user->isPrivileged();
         $redirectTarget = $this->normalizeRedirectTarget($credentials['redirect_to'] ?? null);
-        $isSuspicious = $this->riskEvaluator->isSuspicious($user->getKey(), $countryCode);
+        $riskFlags = $this->riskEvaluator->triggeredFlags($user->getKey(), $countryCode);
 
-        LoginHistory::record($user->getKey(), $ip, $countryCode, 'success');
+        LoginHistory::record($user->getKey(), $ip, $countryCode, 'success', $riskFlags);
 
-        if ($isSuspicious) {
+        if ($riskFlags !== []) {
             Auth::logout();
             $request->session()->regenerate();
             $this->beginPendingVerification($request, $user, $rememberApplied, $redirectTarget);
@@ -1402,7 +1500,7 @@ Route::get('/login/verify', static fn () => redirect('/login'))->name('login.ver
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `wsl php artisan test tests/Feature/Auth/LoginTest.php`
-Expected: PASS (all tests, including the 7 new ones)
+Expected: PASS (all tests, including the 8 new ones)
 
 - [ ] **Step 6: Commit**
 
@@ -1851,6 +1949,12 @@ In `lang/de/booking/admin.php`, inside the `'users' => [...]` array (after `'sec
             'login_history_status_failed' => 'Fehlgeschlagen',
             'login_history_status_throttled' => 'Gedrosselt',
             'login_history_empty' => 'Keine Login-Ereignisse in den letzten 30 Tagen.',
+            'login_history_risk_score' => 'Risiko-Score (30 Tage)',
+            'login_history_flags' => 'Auffälligkeiten',
+            'login_history_flags_none' => '—',
+            'login_history_flag_unusual_country' => 'Ungewöhnliches Land',
+            'login_history_flag_recent_failed_attempts' => 'Fehlversuche',
+            'login_history_flag_impossible_travel' => 'Unmögliche Reise',
 ```
 
 In `lang/en/booking/admin.php`, inside the `'users' => [...]` array, add:
@@ -1865,6 +1969,12 @@ In `lang/en/booking/admin.php`, inside the `'users' => [...]` array, add:
             'login_history_status_failed' => 'Failed',
             'login_history_status_throttled' => 'Throttled',
             'login_history_empty' => 'No login events in the last 30 days.',
+            'login_history_risk_score' => 'Risk score (30 days)',
+            'login_history_flags' => 'Flags',
+            'login_history_flags_none' => '—',
+            'login_history_flag_unusual_country' => 'Unusual country',
+            'login_history_flag_recent_failed_attempts' => 'Recent failures',
+            'login_history_flag_impossible_travel' => 'Impossible travel',
 ```
 
 - [ ] **Step 2: Write the failing test**
@@ -1923,6 +2033,22 @@ class UserLoginHistoryTest extends TestCase
             ->assertOk()
             ->assertSee(__('booking.admin.users.login_history_empty'));
     }
+
+    #[Test]
+    public function it_shows_the_risk_score_and_which_flags_fired(): void
+    {
+        $admin = User::factory()->create(['status' => 'admin']);
+        $user = User::factory()->create();
+        LoginHistory::record((int) $user->uid, '203.0.113.5', 'RU', 'success', ['unusual_country', 'impossible_travel']);
+
+        $response = $this->actingAs($admin)->get(route('admin.users.login-history', $user));
+
+        $response->assertOk()
+            ->assertSee(__('booking.admin.users.login_history_risk_score'))
+            ->assertSee('2')
+            ->assertSee(__('booking.admin.users.login_history_flag_unusual_country'))
+            ->assertSee(__('booking.admin.users.login_history_flag_impossible_travel'));
+    }
 }
 ```
 
@@ -1946,6 +2072,7 @@ Add a new public method (after `edit()`):
     {
         return view('admin.users.login-history', [
             'user' => $user,
+            'riskScore' => LoginHistory::riskScore((int) $user->getKey()),
             'history' => LoginHistory::query()
                 ->where('user_id', $user->getKey())
                 ->latest('created_at')
@@ -1972,7 +2099,7 @@ In `routes/web.php`, inside the existing `Route::middleware('can:admin.user')->g
 <div class="ui-page">
     <div class="ui-page-header">
         <h1>{{ __('booking.admin.users.login_history_title') }}</h1>
-        <p>{{ $user->alias }}</p>
+        <p>{{ $user->alias }} — {{ __('booking.admin.users.login_history_risk_score') }}: {{ $riskScore }}</p>
     </div>
 
     <div class="ui-card">
@@ -1984,6 +2111,7 @@ In `routes/web.php`, inside the existing `Route::middleware('can:admin.user')->g
                         <th>{{ __('booking.admin.users.login_history_ip') }}</th>
                         <th>{{ __('booking.admin.users.login_history_country') }}</th>
                         <th>{{ __('booking.admin.users.login_history_status') }}</th>
+                        <th>{{ __('booking.admin.users.login_history_flags') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1993,10 +2121,17 @@ In `routes/web.php`, inside the existing `Route::middleware('can:admin.user')->g
                             <td>{{ $entry->ip }}</td>
                             <td>{{ $entry->country_code ?? '—' }}</td>
                             <td>{{ __('booking.admin.users.login_history_status_'.$entry->status) }}</td>
+                            <td>
+                                @if($entry->risk_flags)
+                                    {{ collect(explode(',', $entry->risk_flags))->map(fn (string $flag): string => __('booking.admin.users.login_history_flag_'.$flag))->join(', ') }}
+                                @else
+                                    {{ __('booking.admin.users.login_history_flags_none') }}
+                                @endif
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4">{{ __('booking.admin.users.login_history_empty') }}</td>
+                            <td colspan="5">{{ __('booking.admin.users.login_history_empty') }}</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -2022,7 +2157,7 @@ In `resources/views/admin/users/edit.blade.php`, add a link right after the page
 - [ ] **Step 8: Run the tests to verify they pass**
 
 Run: `wsl php artisan test tests/Feature/Admin/UserLoginHistoryTest.php`
-Expected: PASS (3 tests)
+Expected: PASS (4 tests)
 
 - [ ] **Step 9: Sanity-check the edit page still renders**
 
@@ -2069,7 +2204,8 @@ In `CHANGELOG.md`, add a new entry at the top (adjust the date to whatever day t
   2+ recent failed attempts, or impossible travel within 24h) — normal logins are
   unaffected. Backed by a new 30-day `login_history` table. Country-based checks
   fail open when the MaxMind GeoLite2 file is missing. Admins can view a user's
-  login history read-only from their edit page.
+  login history read-only from their edit page, including a display-only risk
+  score (30-day sum of fired triggers) and which flags fired per login.
 ```
 
 - [ ] **Step 5: Commit**
@@ -2085,6 +2221,6 @@ This is the one commit in the whole plan that goes through the normal `pre-commi
 
 ## Self-Review Notes
 
-- **Spec coverage:** all 3 triggers (Task 5), the MaxMind file gate (Task 4), the 6-digit code with 10 min TTL / 5 attempts (Task 10), 60s resend cooldown (Task 10), 30-day retention pruning (Task 1), the admin read-only history page (Task 11), and the CHANGELOG requirement (Task 12) are each covered by a task.
-- **Type consistency:** `LoginRiskEvaluator::isSuspicious(int $userId, ?string $countryCode)` is called identically in `LoginController` (Task 9) and matches its Task 5 definition. `LoginBookkeeping::syncLegacyLoginTracking(?User $user, bool $successful, string $ip, int $lockoutSeconds)` — note the added `$lockoutSeconds` parameter — is called with `self::LOCKOUT_SECONDS` from `LoginController` and a literal `600` from `LoginVerificationController` (Task 10); both resolve to the same value as the pre-existing constant, so behavior is unchanged.
+- **Spec coverage:** all 3 triggers (Task 5), the MaxMind file gate (Task 4), the 6-digit code with 10 min TTL / 5 attempts (Task 10), 60s resend cooldown (Task 10), 30-day retention pruning (Task 1), the admin read-only history page (Task 11), the display-only risk score and per-row flags (Tasks 1, 2, 5, 9, 11), and the CHANGELOG requirement (Task 12) are each covered by a task.
+- **Type consistency:** `LoginRiskEvaluator::triggeredFlags(int $userId, ?string $countryCode): array` is called identically in `LoginController` (Task 9) and matches its Task 5 definition; `isSuspicious()` is a thin wrapper (`triggeredFlags() !== []`) kept only where a plain bool reads better. `LoginHistory::record()`'s new `array $riskFlags = []` parameter and `LoginHistory::riskScore(int $userId): int` (Task 1) are used consistently from `LoginController` (Task 9) and `UserController::loginHistory()` (Task 11). `LoginBookkeeping::syncLegacyLoginTracking(?User $user, bool $successful, string $ip, int $lockoutSeconds)` — note the added `$lockoutSeconds` parameter — is called with `self::LOCKOUT_SECONDS` from `LoginController` and a literal `600` from `LoginVerificationController` (Task 10); both resolve to the same value as the pre-existing constant, so behavior is unchanged.
 - **Commit hygiene:** every task except the last uses `--no-verify` since the `pre-commit` hook (added in an earlier session) would otherwise demand a CHANGELOG entry per commit; this plan deliberately writes one consolidated entry at the end once the whole feature works end-to-end, per Task 12's note.

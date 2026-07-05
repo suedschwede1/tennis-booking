@@ -58,6 +58,7 @@ New table `login_history` (migration in `database/migrations/`, registered in
 | `ip` | string(45) | |
 | `country_code` | string(2), nullable | Resolved once per login attempt via `Stevebauman\Location`, cached in-request to avoid duplicate lookups (geo-blocking check + risk evaluation would otherwise both call it) |
 | `status` | string | `success`, `failed`, or `throttled` — mirrors `LoginController::logAttempt()` event names |
+| `risk_flags` | string, nullable | Comma-separated subset of `unusual_country`, `recent_failed_attempts`, `impossible_travel` — which trigger(s), if any, matched for this attempt. Only ever set on `success` rows (risk evaluation only runs after a correct password); null/empty for `failed`/`throttled` rows and for `success` rows where nothing fired. Feeds the admin-only risk score below. |
 | `created_at` | timestamp | no `updated_at` needed |
 
 Indexes: `(user_id, created_at)` for the risk queries, plus a plain index on `created_at`
@@ -132,6 +133,23 @@ No filtering/search in this iteration — just a simple table, same `ui-table` s
 the rest of the admin. Permission: same `can:admin.user` gate as the rest of user
 management.
 
+### Risk score (display only, no behavior change)
+
+`LoginRiskEvaluator` is changed from returning a plain bool to returning the actual list
+of matched trigger names (`triggeredFlags(int $userId, ?string $countryCode): array`,
+empty array = not suspicious — `isSuspicious()` becomes `triggeredFlags() !== []`). That
+list is persisted into the new `risk_flags` column on the `success` row for that login.
+
+The admin login-history page shows, above the table, a **Risk score (last 30 days)**:
+the total count of individual flags across all of the user's `login_history` rows in the
+last 30 days (a login where 2 triggers fired counts as 2, not 1). Purely informational —
+it does not change the verification threshold, does not gate anything, and is not stored
+anywhere outside `login_history` (no new column on `bs_users`/`bs_users_meta`); it's
+computed on read by summing `risk_flags` entries within the existing 30-day window,
+which is why it also naturally "decays" — a clean 30 days brings it back to 0. The table
+itself also gains a column showing which flags (if any) fired for each row, so an admin
+can see *why* a given login was flagged.
+
 ## Error handling
 
 - Mail send failure (exception from `Mail::send`): don't silently let the user in.
@@ -162,6 +180,8 @@ Feature tests (extending existing `LoginController` test coverage):
 - Resend is throttled to 1/60s.
 - A `login_history` row older than 30 days is gone after the next login for that user.
 - Admin login-history page renders the user's rows, is denied without `admin.user`.
+- A login where 2 triggers fire records both flags on its `login_history` row, and the
+  risk score sums flags correctly across multiple rows within the 30-day window.
 
 Non-functional:
 
