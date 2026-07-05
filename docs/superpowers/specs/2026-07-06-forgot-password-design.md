@@ -20,9 +20,12 @@ scaffolding traits.
 
 1. User clicks "Passwort vergessen?" on the login page → `GET /password/forgot`
 2. User submits their email → `POST /password/forgot`
-   - `Password::sendResetLink(['email' => $email])` is called **only if** a user
-     with that email exists and `isEnabled()` is true (status `enabled`, `assist`,
-     or `admin`)
+   - **Only if** a user with that email exists and `isEnabled()` is true (status
+     `enabled`, `assist`, or `admin`): a token is created via
+     `Password::broker()->createToken($user)` and the custom `PasswordReset`
+     mailable is queued directly (not `Password::sendResetLink()`'s default
+     notification, which would send an unbranded English email — see the "New
+     files" section below)
    - Regardless of whether a link was actually sent, the response is identical:
      a generic "if that address is registered, a reset link has been sent" message.
      This prevents account enumeration (existence *and* status) via response
