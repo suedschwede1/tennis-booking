@@ -28,6 +28,24 @@ If country resolution fails (geolocation lookup returns nothing, same as the exi
 `isLoginBlockedByCountry` fail-open behavior), triggers 1 and 3 are skipped for that
 login; trigger 2 is unaffected since it doesn't depend on geo data.
 
+**MaxMind dependency:** `config('location.driver')` is `MaxMind`, which reads a local
+`.mmdb` file (`storage/app/geoip/GeoLite2-Country.mmdb`, path from
+`GEOIP_DATABASE_PATH`). Like the untracked per-installation override files described in
+AGENTS.md, this file isn't guaranteed to exist on every deployment (it's a downloaded
+binary, not committed). Country-based checks (triggers 1 and 3, and the existing
+`isLoginBlockedByCountry` geo-blocking) must **only run if the file exists** — checked
+via `file_exists()` before calling `Location::get()` — and are silently skipped
+(fail-open) otherwise, the same way they already fail open when a lookup returns no
+result. Extract this into one shared helper (e.g. `App\Services\GeoLookup::resolveCountry(string $ip): ?string`)
+used by both `isLoginBlockedByCountry()` and the new risk evaluator, so the file-exists
+guard and the single-lookup-per-request optimization both live in one place instead of
+being duplicated.
+
+**Failed-attempt threshold note:** the existing lockout after `EMAIL_IP_MAX_ATTEMPTS = 5`
+failed attempts (within the 10-minute `LOCKOUT_SECONDS` window) already exceeds trigger
+2's `≥ 2 in 1 hour` threshold, so a login that follows such a lockout is always covered —
+no separate rule needed for "5 failed attempts" specifically.
+
 ## Data model
 
 New table `login_history` (migration in `database/migrations/`, registered in
@@ -135,6 +153,8 @@ Feature tests (extending existing `LoginController` test coverage):
 - First-ever login for a user (no `login_history` rows yet) never triggers the
   country-based checks.
 - Geo lookup failure skips country-based checks but failed-attempt trigger still fires.
+- Missing MaxMind `.mmdb` file skips country-based checks the same way (fail-open),
+  without throwing.
 - Correct code completes login and preserves `remember`/`redirect_to`.
 - Wrong code up to 4 times keeps the pending state; the 5th clears it and requires
   restarting from `/login`.
