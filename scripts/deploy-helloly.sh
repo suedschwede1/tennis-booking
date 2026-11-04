@@ -35,6 +35,7 @@
 # Flow on the server: pre-flight (.env must exist; drop generated bootstrap/cache files;
 # migrations-table check; maintenance mode `php artisan down` if the app is installed)
 # -> remove repo-owned dirs (so deleted files/migrations do not linger) -> extract ->
+# link ZF2 static assets into public/ (see below) ->
 # drop generated bootstrap/cache files again (they may list dev-only providers) ->
 # composer install -> optimize:clear -> migrate --force -> config/route/view cache ->
 # php artisan up. With --first-deploy the migrate/cache/up steps are skipped (see above).
@@ -49,6 +50,13 @@
 #   3. php artisan db:baseline-legacy
 #   4. php artisan migrate --force
 # Never add them to this script.
+#
+# ZF2 assets: the tournament pages are served from the legacy ZF2 app through
+# public/zf2-bridge.php. After extracting, the script symlinks ZF2's static dirs (css,
+# css-client, docs, docs-client, imgs, imgs-client, js, js-client, misc, misc-client,
+# vendor) into public/ (merging per file where Laravel tracks its own files). The ZF2 public
+# dir is the first line of <target>/zf2.path (untracked) or <target>/../zf2/public. If it
+# does not exist a note is printed and the deploy continues.
 #
 # Never touched on the server: .env, storage/, vendor/ (composer updates it).
 # The wipe never deletes *.sqlite* files; pre-flight refuses a server .env with DB_CONNECTION=sqlite.
@@ -205,6 +213,29 @@ done'
 
 remote_extract="T=$RT; cd \"\$T\"  && ( $wipe_cmd )  && tar -x --anchored --exclude=.env --exclude=storage"
 
+# Link the legacy ZF2 app's static assets into public/ so the tournament pages (served
+# through public/zf2-bridge.php) find their css/js/imgs. The ZF2 public dir is the first
+# line of $T/zf2.path if present, else <dirname $T>/zf2/public. Missing dir: note + continue.
+# Dangling symlinks under public/ are removed first; absent dirs become symlinks; real
+# dirs (which collide with Laravel's tracked css/booking.css, js/booking.js, imgs-client/...)
+# get non-overwriting per-file symlinks (cp -rsn), so tracked files are never touched.
+zf2_assets_body='if [ -f "$T/zf2.path" ]; then Z="$(head -n 1 "$T/zf2.path" | tr -d "\r")"; else Z="$(dirname "$T")/zf2/public"; fi
+if [ ! -d "$Z" ]; then
+  echo "ZF2 public dir not found: tournament pages will not work until it exists"
+  exit 0
+fi
+find "$T/public" -xtype l -delete || exit 1
+for d in css css-client docs docs-client imgs imgs-client js js-client misc misc-client vendor; do
+  [ -d "$Z/$d" ] || continue
+  if [ ! -e "$T/public/$d" ] && [ ! -L "$T/public/$d" ]; then
+    ln -s "$Z/$d" "$T/public/$d" || exit 1
+  elif [ -d "$T/public/$d" ] && [ ! -L "$T/public/$d" ]; then
+    cp -rsn "$Z/$d/." "$T/public/$d/" || exit 1
+  fi
+done
+echo "ZF2 assets linked from $Z"'
+remote_zf2_assets="T=$RT; $zf2_assets_body"
+
 # After extract: drop generated caches BEFORE any artisan call, then composer install
 # (regenerates them against the server's --no-dev vendor/). No optimize:clear before it.
 remote_common="T=$RT; cd \"\$T\" \
@@ -247,6 +278,8 @@ if [ "$DRY_RUN" -eq 1 ]; then
     echo "[dry-run] ssh $SSH_HOST '$remote_preflight'"
     step "Uploading $commit"
     echo "[dry-run] git archive HEAD | ssh $SSH_HOST '$remote_extract'"
+    step "Linking ZF2 assets into public/"
+    echo "[dry-run] ssh $SSH_HOST '$remote_zf2_assets'"
     step "Installing dependencies and refreshing caches"
     echo "[dry-run] ssh $SSH_HOST '$remote_steps'"
     if [ "$FIRST_DEPLOY" -eq 1 ]; then
@@ -277,6 +310,9 @@ esac
 
 step "Uploading $commit to $SSH_HOST:$TARGET"
 git archive HEAD | ssh "$SSH_HOST" "$remote_extract"
+
+step "Linking ZF2 assets into public/"
+ssh "$SSH_HOST" "$remote_zf2_assets"
 
 step "Installing dependencies and refreshing caches"
 ssh "$SSH_HOST" "$remote_steps"
