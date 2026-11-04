@@ -18,7 +18,7 @@ keep running on the old ZF2 system until they are ported in a later phase.
 
 - Laravel serves court booking, the account area, the admin area, and the Members
   module at `https://tcbewegung.at/booking`.
-- The old ZF2 system keeps serving the tournament modules at a separate address,
+- The old ZF2 system keeps serving the tournament modules at a separate address, **[Superseded by "Revision 2026-11-04 (same host)": same host, no `turnier.` subdomain.]**
   `turnier.tcbewegung.at`, until phase 2.
 - Both systems run at the same time against the **same** live database
   (`helloly41567002_booking`), so there is no data copy or sync between two databases.
@@ -46,9 +46,9 @@ keep running on the old ZF2 system until they are ported in a later phase.
 - Porting `Tournament`, `MixedTournament`, `Pyramid`, `Draw` to Laravel (phase 2,
   separate design).
 - Single sign-on between Laravel and ZF2. During the transition, members log in again
-  on `turnier.tcbewegung.at` (decided by the user, acceptable for the interim).
+  on `turnier.tcbewegung.at` (decided by the user, acceptable for the interim). **[Superseded: ZF2 login stays at `/user/login` on the same host.]**
 - Changes to the Grav homepage in `public_html`, apart from updating links if needed.
-- Changes to mail accounts or DNS beyond adding the `turnier` subdomain.
+- Changes to mail accounts or DNS beyond adding the `turnier` subdomain. **[Superseded: no `turnier` subdomain.]**
 
 ## Anti-goals
 
@@ -97,7 +97,7 @@ must not be lost.
 
 1. The new host is Helloly, and the ZF2 system there is live.
 2. Booking moves first. Tournaments follow later.
-3. Laravel at `tcbewegung.at/booking`, ZF2 for tournaments at its own address
+3. Laravel at `tcbewegung.at/booking`, ZF2 for tournaments at its own address **[Superseded: same host.]**
    (`turnier.tcbewegung.at`).
 4. Members log in separately on the tournament site during the transition.
 5. Existing backups are sufficient. No extra backup tooling is needed for this design.
@@ -126,7 +126,7 @@ must not be lost.
    `DatabaseSchemaChecker`, a dedicated artisan command, or a manual baseline insert
    into `migrations` is the builder's choice. It has to be repeatable (staging first,
    then live) and idempotent.
-4. **Move ZF2 to `turnier.tcbewegung.at`.** Create the subdomain in cPanel, with its
+4. **Move ZF2 to `turnier.tcbewegung.at`.** **[Superseded: ZF2 is installed in `~/apps/zf2` and served through `public/zf2-bridge.php`; see the revision below.]** Create the subdomain in cPanel, with its
    document root at the ZF2 `public` directory (or a copy of the current layout), plus
    SSL. Turn off court booking in ZF2 there: hide or redirect the calendar/booking
    routes to `https://tcbewegung.at/booking`, so only tournament, pyramid, and draw
@@ -158,7 +158,7 @@ must not be lost.
 - **Tournament privileges move to Laravel's admin.** ZF2 checks `allow.admin.tournament`,
   `allow.admin.mixed`, `allow.admin.pyramid`, `allow.admin.draw` in `bs_users_meta`.
   These four get added to `User::PRIVILEGES`, so they can be granted in Laravel's user
-  admin. The ZF2 backend user and booking admin is **not** kept on `turnier.`, because
+  admin. The ZF2 backend user and booking admin is **not** kept on `turnier.`, because **[Superseded: ZF2 booking UI is unreachable because only an allowlist is routed to ZF2.]**
   that would reopen a second place to edit bookings. Laravel's `syncPrivileges` only
   touches its own keys today, so existing grants survive.
 
@@ -174,7 +174,7 @@ must not be lost.
 
 - Exact directory layout on Helloly and the symlink-vs-rewrite choice for `/booking`.
 - How to baseline the migrations on an existing database (see step 3).
-- How ZF2's booking routes get disabled on `turnier.` (config, route override, or
+- How ZF2's booking routes get disabled on `turnier.` (config, route override, or **[Superseded: the allowlist rewrite in `public/.htaccess` is the mechanism.]**
   `.htaccess`).
 - Redirects for old ZF2 booking URLs under `/booking/...` that members have bookmarked
   or that appear in old emails, mapped to their Laravel equivalents where one exists.
@@ -182,3 +182,46 @@ must not be lost.
 - Updating the README/AGENTS deployment section from one.com/FTP to Helloly/SSH.
 - Deploy script (`git pull` + `composer install --no-dev` + `artisan migrate --force`
   + cache warm-up) for Helloly.
+
+## Revision 2026-11-04 (same host)
+
+The club admin decided that the tournament pages must stay on the **same host** as the Laravel app (old URLs such as
+`https://tcbewegung.at/booking/mixed-tournament` keep working). This **supersedes** every earlier statement in this
+document about serving ZF2 at `turnier.tcbewegung.at` (decisions 3 and 4, the "Move ZF2 to `turnier.`" step, the
+separate-login-on-`turnier.` wording and the `turnier` DNS/SSL/vhost work). A staging spike on `neu.tcbewegung.at`
+proved the approach.
+
+### Architecture
+
+- `public/.htaccess` (Laravel) rewrites an **allowlist** to `public/zf2-bridge.php` (internal, `[L]`, placed before the
+  front-controller rule): `^(tournament|mixed-tournament|pyramide|draw|service)(/|$)` and
+  `^user/(login|logout|password(-reset)?)(/|$)`. `service` covers `/service/help` and `/service/info`, which tournament
+  pages link to.
+- `public/zf2-bridge.php` presents ZF2's `index.php` as if it lived in this docroot (`SCRIPT_NAME`, `PHP_SELF`,
+  `SCRIPT_FILENAME`, so it works under `/booking`) and requires it. ZF2 public dir: env `ZF2_PUBLIC`, else the first
+  line of the untracked `<app root>/zf2.path`, else `<app root>/../../zf2/public` (live: app in `~/apps/bookingnew`, ZF2 in
+  `~/apps/zf2`). A missing ZF2 answers `503` without paths; a direct request for the bridge answers `404`.
+- ZF2's static dirs (`css css-client docs docs-client imgs imgs-client js js-client misc misc-client vendor`) are
+  symlinked into Laravel's `public/` by `scripts/deploy-helloly.sh` (per-file `cp -rsn` where Laravel tracks its own files,
+  never overwriting).
+- ZF2 keeps its own login (`/user/login`) and session (`ep3-bs-session`); Laravel keeps `/login`. Same accounts and
+  passwords, two logins (accepted).
+- Court booking (calendar, square, backend, `user/bookings`, `user/settings`, registration, `user/activation`) is **not**
+  routed to ZF2, so the ZF2 booking UI is unreachable; those old URLs are 302 redirects served by Laravel. The Laravel
+  redirects for `/user/login|logout|password|password-reset` were removed (ZF2 serves them now).
+- `TOURNAMENT_BASE_URL` is empty by default (same host): the header links are `url('/pyramide')`, `url('/mixed-tournament')`,
+  `url('/tournament')` and honor the `/booking` base path; a full URL is only for a separate tournament host. It is empty on
+  staging and live.
+- The ZF2 repo's `turnier.` host gate (`.htaccess` and its test matrix) is **unused** in this model: the ZF2 `.htaccess`
+  is never read because the document root is Laravel's `public`.
+
+### Trade-offs
+
+- **Two logins** (Laravel and ZF2) with the same credentials; no SSO.
+- **ZF2 runs under PHP 8.4** (the domain's version) instead of what it runs on today; must be verified on staging.
+- **The `.htaccess` allowlist is the security boundary** for the ZF2 code: a path added there exposes ZF2. It is covered by
+  `tests/Unit/PublicHtaccessTest.php`; the one-off `public/*.php` maintenance scripts of the old install must never be copied
+  into the ZF2 install used here.
+- ZF2 needs its own install directory with a config pointing at the matching DB (staging copy for staging).
+
+The runbook (`docs/deploy/2026-helloly-cutover-runbook.md`) carries the operational steps and the routing test table.
