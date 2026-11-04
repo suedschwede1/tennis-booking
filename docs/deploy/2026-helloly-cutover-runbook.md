@@ -166,7 +166,7 @@ A6. **ZF2 tournament pages on the staging host (same host, no subdomain).** Orde
     | `/tournament`, `/mixed-tournament`, `/pyramide`, `/draw` (and sub-paths) | 200 ZF2 page, or 302 to `/user/login` (ZF2) when not logged in |
     | `/service/help`, `/service/info` | 200 ZF2 page |
     | `/user/login`, `/user/logout`, `/user/password`, `/user/password-reset` | ZF2 page / ZF2 redirect (not a redirect to Laravel `/login`); old bookmarks to `/user/login` now open the ZF2 login |
-    | `/zf2-bridge.php`, `/zf2-bridge.php/x`, `/booking/zf2-bridge.php/backend` | 404 (the bridge is only reachable through the rewrites) |
+    | `/zf2-bridge.php`, `/zf2-bridge.php/x`, `//zf2-bridge.php/x`, `/booking/zf2-bridge.php/backend` | 404 (the bridge is only reachable through the rewrites) |
     | `/tournament/`, `/mixed-tournament/`, `/pyramide/`, `/user/login/` | 301 to the slashless URL (then as above) |
     | `/calendar`, `/login`, `/register`, `/admin`, `/bookings...`, `/account...` | Laravel page (200, or 302 to Laravel `/login`) |
     | `/user/bookings`, `/user/settings`, `/user/registration`, `/user/activation/x` | 302 to the Laravel page |
