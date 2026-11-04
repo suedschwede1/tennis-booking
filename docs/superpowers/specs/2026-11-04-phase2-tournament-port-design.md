@@ -1,6 +1,6 @@
 # Phase 2: port Draw, Tournament, Pyramid and MixedTournament to Laravel
 
-Date: 2026-11-04. Status: all questions answered by the club admin, awaiting final approval of the document. Inputs: `.superpowers/sdd/phase2/inventory-{draw,tournament,pyramid,mixedtournament}.md` (INV-D/T/P/M), phase-1 spec `2026-11-04-helloly-laravel-cutover-design.md` incl. "Revision (same host)".
+Date: 2026-11-04. Status: approved by the club admin on 2026-11-04 ("passt"). Implementation plans are written per module, just in time, in the proposed order. Inputs: `.superpowers/sdd/phase2/inventory-{draw,tournament,pyramid,mixedtournament}.md` (INV-D/T/P/M), phase-1 spec `2026-11-04-helloly-laravel-cutover-design.md` incl. "Revision (same host)".
 
 ## Intent and why
 
