@@ -1,5 +1,9 @@
 # Helloly Cutover (Phase 1) Implementation Plan
 
+> **Superseded in part (2026-11-04):** Tasks 6 and 7 and every `turnier.` subdomain instruction in this plan are superseded by
+> the same-host model (ZF2 tournament pages served through `public/zf2-bridge.php` and a `.htaccess` allowlist). See the
+> "Revision 2026-11-04 (same host)" section of the spec and `docs/deploy/2026-helloly-cutover-runbook.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Laravel (`bookingnew`) takes over court booking at `tcbewegung.at/booking` on Helloly. The ZF2 system keeps serving only the tournament modules at `turnier.tcbewegung.at`, and both share the live database.

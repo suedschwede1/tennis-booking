@@ -55,8 +55,8 @@
 # public/zf2-bridge.php. After extracting, the script symlinks ZF2's static dirs (css,
 # css-client, docs, docs-client, imgs, imgs-client, js, js-client, misc, misc-client,
 # vendor) into public/ (merging per file where Laravel tracks its own files). The ZF2 public
-# dir is the first line of <target>/zf2.path (untracked) or <target>/../zf2/public. If it
-# does not exist a note is printed and the deploy continues.
+# dir is the first line of <target>/zf2.path (untracked, absolute) or <target>/../zf2/public
+# (the latter only for a target named bookingnew). If it is not found a note is printed and the deploy continues.
 #
 # Never touched on the server: .env, storage/, vendor/ (composer updates it).
 # The wipe never deletes *.sqlite* files; pre-flight refuses a server .env with DB_CONNECTION=sqlite.
@@ -215,13 +215,22 @@ remote_extract="T=$RT; cd \"\$T\"  && ( $wipe_cmd )  && tar -x --anchored --excl
 
 # Link the legacy ZF2 app's static assets into public/ so the tournament pages (served
 # through public/zf2-bridge.php) find their css/js/imgs. The ZF2 public dir is the first
-# line of $T/zf2.path if present, else <dirname $T>/zf2/public. Missing dir: note + continue.
+# line of $T/zf2.path if present (trimmed like the bridge; must be absolute), else
+# <dirname $T>/zf2/public but ONLY when the target dir is named "bookingnew" (so a staging
+# target can never link the live ZF2). Nothing resolved or dir missing: note + continue.
 # Dangling symlinks under public/ are removed first; absent dirs become symlinks; real
 # dirs (which collide with Laravel's tracked css/booking.css, js/booking.js, imgs-client/...)
 # get non-overwriting per-file symlinks (cp -rsn), so tracked files are never touched.
-zf2_assets_body='if [ -f "$T/zf2.path" ]; then Z="$(head -n 1 "$T/zf2.path" | tr -d "\r")"; else Z="$(dirname "$T")/zf2/public"; fi
-if [ ! -d "$Z" ]; then
+zf2_assets_body='Z=""
+if [ -f "$T/zf2.path" ]; then
+  Z="$(head -n 1 "$T/zf2.path" | sed -e "s/^[[:space:]]*//" -e "s/[[:space:]]*\$//")"
+  case "$Z" in /*) ;; *) Z="" ;; esac
+elif [ "$(basename "$T")" = "bookingnew" ]; then
+  Z="$(dirname "$T")/zf2/public"
+fi
+if [ -z "$Z" ] || [ ! -d "$Z" ]; then
   echo "ZF2 public dir not found: tournament pages will not work until it exists"
+  echo "(default ../zf2/public applies only to a target named bookingnew; otherwise create $T/zf2.path with an absolute path)"
   exit 0
 fi
 find "$T/public" -xtype l -delete || exit 1

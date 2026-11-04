@@ -199,8 +199,11 @@ proved the approach.
   pages link to.
 - `public/zf2-bridge.php` presents ZF2's `index.php` as if it lived in this docroot (`SCRIPT_NAME`, `PHP_SELF`,
   `SCRIPT_FILENAME`, so it works under `/booking`) and requires it. ZF2 public dir: env `ZF2_PUBLIC`, else the first
-  line of the untracked `<app root>/zf2.path`, else `<app root>/../../zf2/public` (live: app in `~/apps/bookingnew`, ZF2 in
-  `~/apps/zf2`). A missing ZF2 answers `503` without paths; a direct request for the bridge answers `404`.
+  line of the untracked `<app root>/zf2.path`, else `<app root>/../zf2/public`, **the default only when the app directory is named `bookingnew`** (live: app in
+  `~/apps/bookingnew`, ZF2 in `~/apps/zf2`); any other app directory such as `bookingnew-staging` must set `ZF2_PUBLIC` or
+  `zf2.path` (an absolute path), so a staging host can never silently serve the live ZF2 install. A missing or unresolved ZF2
+  answers `503` without paths; any request whose path contains `zf2-bridge.php` (including PATH_INFO forms) answers `404`.
+  A trailing slash on an allowlisted path is 301-redirected to the slashless URL by `public/.htaccess`.
 - ZF2's static dirs (`css css-client docs docs-client imgs imgs-client js js-client misc misc-client vendor`) are
   symlinked into Laravel's `public/` by `scripts/deploy-helloly.sh` (per-file `cp -rsn` where Laravel tracks its own files,
   never overwriting).

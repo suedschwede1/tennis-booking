@@ -145,7 +145,10 @@ A6. **ZF2 tournament pages on the staging host (same host, no subdomain).** Orde
        test mailbox. Then run `grep -n 'helloly41567002_booking' ~/apps/zf2-staging/config/autoload/local.php`; it must
        **not** match the live name (a match ending in `_staging` is fine). Double-check with `grep -rn 'helloly41567002_booking'
        ~/apps/zf2-staging/config` that no other file names the live DB.
-    3. Tell the Laravel staging install where ZF2 lives (the default `~/apps/zf2/public` would be the live copy):
+    3. Tell the Laravel staging install where ZF2 lives. **Risk:** after B2 `~/apps/zf2` is the LIVE ZF2 install (live DB). The
+       bridge and the deploy script therefore use the default `../zf2/public` only for an app directory named `bookingnew`;
+       `bookingnew-staging` answers 503 / links no assets without this file, but if you ever rename the staging directory to
+       `bookingnew` the default would silently point at the live ZF2. Keep the file:
        `echo "$HOME/apps/zf2-staging/public" > ~/apps/bookingnew-staging/zf2.path`. Re-run the staging deploy (A3.2 without
        `--first-deploy` once migrations exist, otherwise just the asset linking step) so the assets are symlinked into
        `~/apps/bookingnew-staging/public`; the deploy output must say `ZF2 assets linked from .../zf2-staging/public`.
@@ -162,8 +165,9 @@ A6. **ZF2 tournament pages on the staging host (same host, no subdomain).** Orde
     |------|----------|
     | `/tournament`, `/mixed-tournament`, `/pyramide`, `/draw` (and sub-paths) | 200 ZF2 page, or 302 to `/user/login` (ZF2) when not logged in |
     | `/service/help`, `/service/info` | 200 ZF2 page |
-    | `/user/login`, `/user/logout`, `/user/password`, `/user/password-reset` | ZF2 page / ZF2 redirect (not a redirect to Laravel `/login`) |
-    | `/zf2-bridge.php` | 404 (the bridge is only reachable through the rewrites) |
+    | `/user/login`, `/user/logout`, `/user/password`, `/user/password-reset` | ZF2 page / ZF2 redirect (not a redirect to Laravel `/login`); old bookmarks to `/user/login` now open the ZF2 login |
+    | `/zf2-bridge.php`, `/zf2-bridge.php/x`, `/booking/zf2-bridge.php/backend` | 404 (the bridge is only reachable through the rewrites) |
+    | `/tournament/`, `/mixed-tournament/`, `/pyramide/`, `/user/login/` | 301 to the slashless URL (then as above) |
     | `/calendar`, `/login`, `/register`, `/admin`, `/bookings...`, `/account...` | Laravel page (200, or 302 to Laravel `/login`) |
     | `/user/bookings`, `/user/settings`, `/user/registration`, `/user/activation/x` | 302 to the Laravel page |
     | `/square`, `/square/booking`, `/backend`, `/backend/config` | 302 to Laravel calendar / admin |
