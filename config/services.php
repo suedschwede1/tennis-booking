@@ -29,7 +29,7 @@ return [
     ],
 
     'tournament' => [
-        'base_url' => env('TOURNAMENT_BASE_URL', 'https://turnier.tcbewegung.at'),
+        'base_url' => env('TOURNAMENT_BASE_URL') ?: 'https://turnier.tcbewegung.at',
     ],
 
     'slack' => [
