@@ -36,14 +36,14 @@ class CalendarControllerTest extends TestCase
     #[Test]
     public function calendar_shows_operator_information_in_info_panel(): void
     {
-        Option::create(['key' => 'client.name.full', 'value' => 'ASV Bewegung Steyr', 'locale' => null]);
+        Option::create(['key' => 'client.name.full', 'value' => 'Example Tennis Club', 'locale' => null]);
         Option::create(['key' => 'client.contact.email', 'value' => 'info@example.com', 'locale' => null]);
         Option::create(['key' => 'client.contact.phone', 'value' => '+43 123 4567', 'locale' => null]);
         Option::create(['key' => 'client.website', 'value' => 'https://example.com', 'locale' => null]);
 
         $this->get('/calendar')
             ->assertOk()
-            ->assertSee('ASV Bewegung Steyr')
+            ->assertSee('Example Tennis Club')
             ->assertSee('info@example.com')
             ->assertSee('+43 123 4567')
             ->assertSee('https://example.com');
