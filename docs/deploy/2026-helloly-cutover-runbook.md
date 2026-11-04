@@ -259,7 +259,7 @@ Do this if B5 fails or members cannot book:
 
 ## Open decisions to settle during Part A
 
-- Charset/emoji handling (A1).
+- ~~Charset/emoji handling (A1).~~ **Settled 2026-11-04:** `StripFourByteCharacters` removes 4-byte characters (emoji) from web/api input because the legacy `bs_*` tables are utf8mb3; the Members module is exempt (utf8mb4 tables) and keeps emoji.
 - Members whose `bs_users.pw` hash is not `$2y$` (A1).
 - Whether Helloly refuses the symlink for `/booking` (B4).
 - "Remember me" is now a no-op for members (no token column on `bs_users`); decide whether to hide the checkbox.
