@@ -27,6 +27,8 @@ The tournament paths are still served by ZF2 through `public/zf2-bridge.php` and
 9. The dates of the next season are not fixed, earliest April 2027 (championship start, first ladder challenge, next Mixed event). All go-lives are planned for the winter break (until about March), Tournament last, and never on an event day; the dates are confirmed with the club admin before each module's go-live.
 10. Order accepted: shared base, Draw record page, Pyramid, MixedTournament, then Tournament together with the rest of Draw.
 11. After the last module, a separate reviewed cleanup step may add foreign keys and drop the `*_schema_versions` tables.
+12. The newer ZF2 module code that exists only in the old repo is NOT deployed to the live ZF2 ahead of the port; the club wants the switch to the Laravel app as soon as possible (phase 1 first, phase 2 follows).
+13. The 4-byte stripping on the module routes while any module path is still bridged (see "Character set") is accepted; module data keeps emojis only after the bridge is gone.
 
 ## Constraints
 
