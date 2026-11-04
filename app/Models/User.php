@@ -38,6 +38,7 @@ class User extends Authenticatable
         'calendar.see-past', 'calendar.see-data',
         'calendar.create-single-bookings', 'calendar.cancel-single-bookings', 'calendar.delete-single-bookings',
         'calendar.create-subscription-bookings', 'calendar.cancel-subscription-bookings', 'calendar.delete-subscription-bookings',
+        'admin.tournament', 'admin.mixed', 'admin.pyramid', 'admin.draw',
     ];
 
     protected $table = 'bs_users';
@@ -51,6 +52,13 @@ class User extends Authenticatable
     ];
 
     protected $hidden = ['pw'];
+
+    /**
+     * bs_users (created by the legacy ZF2 system) has no remember_token column.
+     * An empty name makes Laravel skip reading/writing the token, so "remember me"
+     * logins do not 500 on an UPDATE of a missing column.
+     */
+    protected $rememberTokenName = '';
 
     /** Route-model binding for {user} resolves on the primary key `uid`. */
     public function getRouteKeyName(): string

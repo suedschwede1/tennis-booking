@@ -92,6 +92,54 @@ class UserManagementTest extends TestCase
     }
 
     #[Test]
+    public function tournament_privileges_are_offered_in_the_user_form(): void
+    {
+        $u = User::factory()->create(['status' => 'assist']);
+
+        $response = $this->actingAs($this->admin())->get("/admin/users/{$u->uid}/edit");
+
+        $response->assertOk();
+        foreach (['admin.tournament', 'admin.mixed', 'admin.pyramid', 'admin.draw'] as $slug) {
+            $response->assertSee('value="'.$slug.'"', false);
+        }
+    }
+
+    #[Test]
+    public function zf2_granted_tournament_privilege_is_preselected_in_the_user_form(): void
+    {
+        $u = User::factory()->create(['status' => 'assist']);
+        $u->setMeta('allow.admin.pyramid', 'true');
+
+        $html = $this->actingAs($this->admin())->get("/admin/users/{$u->uid}/edit")
+            ->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/<option value="admin\.pyramid"[^>]*\sselected\b[^>]*>/', $html);
+        $this->assertMatchesRegularExpression('/<option value="admin\.draw"(?![^>]*\sselected\b)[^>]*>/', $html);
+    }
+
+    #[Test]
+    public function existing_zf2_tournament_privileges_survive_a_save(): void
+    {
+        $u = User::factory()->create(['status' => 'assist']);
+        $u->setMeta('allow.admin.pyramid', 'true');
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->put("/admin/users/{$u->uid}", [
+            'alias' => $u->alias, 'email' => $u->email, 'status' => 'assist',
+            'privileges' => ['admin.pyramid'],
+        ])->assertRedirect(route('admin.users.index'));
+
+        $this->assertSame('true', $u->fresh()->getMeta('allow.admin.pyramid'));
+
+        $this->actingAs($admin)->put("/admin/users/{$u->uid}", [
+            'alias' => $u->alias, 'email' => $u->email, 'status' => 'assist',
+            'privileges' => ['calendar.see-data'],
+        ])->assertRedirect(route('admin.users.index'));
+
+        $this->assertNull($u->fresh()->getMeta('allow.admin.pyramid'));
+    }
+
+    #[Test]
     public function admin_can_reset_password(): void
     {
         $u = User::factory()->create();

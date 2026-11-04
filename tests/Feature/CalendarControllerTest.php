@@ -5,15 +5,19 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\Booking;
+use App\Models\BookingMeta;
 use App\Models\Event;
-use App\Models\Option;
 use App\Models\EventMeta;
+use App\Models\Option;
 use App\Models\Reservation;
 use App\Models\Square;
 use App\Models\SquareMeta;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Testing\TestResponse;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -50,6 +54,64 @@ class CalendarControllerTest extends TestCase
     {
         $user = User::factory()->create();
         $this->actingAs($user)->get('/calendar')->assertOk()->assertViewIs('calendar.index');
+    }
+
+    private function createTournamentsTable(): void
+    {
+        Schema::dropIfExists('bs_tournaments');
+        Schema::create('bs_tournaments', function ($table): void {
+            $table->increments('tid');
+            $table->string('title');
+            $table->string('status')->default('running');
+            $table->integer('season')->default(2026);
+            $table->tinyInteger('active')->default(0);
+            $table->tinyInteger('is_test')->default(0);
+        });
+    }
+
+    #[Test]
+    public function logged_in_user_sees_tournament_buttons(): void
+    {
+        $this->createTournamentsTable();
+        DB::table('bs_tournaments')->insert(['title' => 'VM 2026', 'status' => 'running', 'season' => 2026, 'active' => 1, 'is_test' => 0]);
+
+        $this->actingAs(User::factory()->create())
+            ->get('/calendar')
+            ->assertOk()
+            ->assertSee('VM 2026')
+            ->assertSee('Forderungspyramide')
+            ->assertSee('Mixed-/Fun-Turnier')
+            ->assertSee('https://turnier.tcbewegung.at/tournament')
+            ->assertSee('https://turnier.tcbewegung.at/pyramide')
+            ->assertSee('https://turnier.tcbewegung.at/mixed-tournament');
+
+        Schema::dropIfExists('bs_tournaments');
+    }
+
+    #[Test]
+    public function championship_button_hidden_without_tournament(): void
+    {
+        $this->createTournamentsTable();
+        DB::table('bs_tournaments')->insert(['title' => 'Zq Finished Cup', 'status' => 'finished', 'season' => 2026, 'active' => 1, 'is_test' => 0]);
+
+        $this->actingAs(User::factory()->create())
+            ->get('/calendar')
+            ->assertOk()
+            ->assertSee('Forderungspyramide')
+            ->assertSee('Mixed-/Fun-Turnier')
+            ->assertDontSee('Zq Finished Cup')
+            ->assertDontSee('turnier.tcbewegung.at/tournament"', false);
+
+        Schema::dropIfExists('bs_tournaments');
+    }
+
+    #[Test]
+    public function guests_see_no_tournament_buttons(): void
+    {
+        $this->get('/calendar')
+            ->assertOk()
+            ->assertDontSee('Forderungspyramide')
+            ->assertDontSee('Mixed-/Fun-Turnier');
     }
 
     #[Test]
@@ -121,6 +183,93 @@ class CalendarControllerTest extends TestCase
         $viewer = User::factory()->create();
         $this->actingAs($viewer)->get('/calendar?date='.Carbon::today()->format('Y-m-d'))
             ->assertSee('Max Mustermann');
+    }
+
+    private function championshipCalendar(?string $notes, ?User $owner = null, ?User $viewer = null): TestResponse
+    {
+        $owner ??= User::factory()->create(['alias' => 'Other Player']);
+        $square = Square::factory()->create();
+        $booking = Booking::factory()->create(['uid' => $owner->uid, 'sid' => $square->sid, 'status' => 'single']);
+        if ($notes !== null) {
+            BookingMeta::create(['bid' => $booking->bid, 'key' => 'notes', 'value' => $notes]);
+        }
+        Reservation::factory()->create([
+            'bid' => $booking->bid,
+            'date' => Carbon::today()->toDateString(),
+            'time_start' => '10:00:00',
+            'time_end' => '11:00:00',
+        ]);
+
+        $viewer ??= User::factory()->create();
+
+        return $this->actingAs($viewer)->get('/calendar?date='.Carbon::today()->format('Y-m-d'));
+    }
+
+    #[Test]
+    public function championship_booking_gets_cc_turnier_class(): void
+    {
+        $this->championshipCalendar('Vereinsmeisterschaft Runde 1')
+            ->assertOk()
+            ->assertSee('cc-turnier', false);
+    }
+
+    #[Test]
+    public function booking_without_championship_note_has_no_cc_turnier_class(): void
+    {
+        $this->championshipCalendar('Training')->assertOk()->assertDontSee('cc-turnier', false);
+        $this->championshipCalendar(null)->assertOk()->assertDontSee('cc-turnier', false);
+    }
+
+    #[Test]
+    public function own_championship_booking_has_cc_own_and_cc_turnier_on_same_element(): void
+    {
+        $user = User::factory()->create();
+
+        $html = $this->championshipCalendar('Vereinsmeisterschaft', $user, $user)->assertOk()->getContent();
+
+        preg_match_all('/class="(calendar-cell[^"]*)"/', $html, $matches);
+        $combined = array_filter(
+            $matches[1],
+            fn (string $classes): bool => in_array('cc-own', explode(' ', $classes), true)
+                && in_array('cc-turnier', explode(' ', $classes), true)
+        );
+
+        $this->assertNotEmpty($combined, 'Expected one cell carrying both cc-own and cc-turnier.');
+    }
+
+    #[Test]
+    public function championship_detection_does_not_add_queries_per_booking(): void
+    {
+        $viewer = User::factory()->create();
+        $date = Carbon::today()->format('Y-m-d');
+        $countQueries = function () use ($viewer, $date): int {
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+            $this->actingAs($viewer)->get('/calendar?date='.$date)->assertOk();
+            DB::disableQueryLog();
+
+            return count(DB::getQueryLog());
+        };
+
+        $square = Square::factory()->create();
+        $addBooking = function (int $hour) use ($square): void {
+            $booking = Booking::factory()->create(['sid' => $square->sid, 'status' => 'single']);
+            BookingMeta::create(['bid' => $booking->bid, 'key' => 'notes', 'value' => 'Vereinsmeisterschaft']);
+            Reservation::factory()->create([
+                'bid' => $booking->bid,
+                'date' => Carbon::today()->toDateString(),
+                'time_start' => sprintf('%02d:00:00', $hour),
+                'time_end' => sprintf('%02d:00:00', $hour + 1),
+            ]);
+        };
+
+        $addBooking(9);
+        $withOne = $countQueries();
+        $addBooking(10);
+        $addBooking(11);
+        $addBooking(12);
+
+        $this->assertSame($withOne, $countQueries());
     }
 
     #[Test]
@@ -260,6 +409,7 @@ class CalendarControllerTest extends TestCase
             ->assertOk()
             ->assertSee('Stadtmeisterschaft');
     }
+
     #[Test]
     public function admin_can_open_existing_event_from_calendar(): void
     {
@@ -420,4 +570,3 @@ class CalendarControllerTest extends TestCase
             ->assertDontSee('href="'.route('lang.switch', ['locale' => 'de']).'"', false);
     }
 }
-
