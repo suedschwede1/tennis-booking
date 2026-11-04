@@ -52,8 +52,14 @@ A1. **Create the staging database** (cPanel > MySQL Databases, club admin): `hel
     first command reads live data with the live credentials, the second writes with the staging user only):
 
     ```bash
-    # 1. dump the LIVE database (read-only); the DB name is the last argument, no --databases flag
-    mysqldump --defaults-file=~/.tcb.cnf --single-transaction helloly41567002_booking > ~/dump-live.sql
+    # 1. dump the LIVE database (read-only); the DB name is the last argument, no --databases flag.
+    #    On Helloly the mysqldump wrapper rejects --defaults-file/--defaults-extra-file ("unknown variable"),
+    #    so read the credentials from ~/.tcb.cnf into variables on the server and pass them via -u/-h/MYSQL_PWD
+    #    (never print them). The PROCESS-privilege warning about tablespaces is harmless.
+    get() { sed -n "s/^$1=//p" "$HOME/.tcb.cnf" | head -1 | sed -E "s/^['\"]//; s/['\"]\$//"; }
+    MYSQL_PWD="$(get password)" mysqldump -u "$(get user)" -h "$(get host)" --single-transaction \
+      helloly41567002_booking > ~/dump-live.sql
+    chmod 600 ~/dump-live.sql
     # 2. the dump must not switch databases: this must print 0
     grep -c -E '^(USE |CREATE DATABASE)' ~/dump-live.sql
     # 3. import into STAGING with the staging user's own credentials (typed at the prompt), staging DB named explicitly
