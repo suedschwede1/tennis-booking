@@ -28,6 +28,7 @@
 # Never add them to this script.
 #
 # Never touched on the server: .env, storage/, vendor/ (composer updates it).
+# The wipe never deletes *.sqlite* files; pre-flight refuses a server .env with DB_CONNECTION=sqlite.
 # Not deployed (git-ignored, place on the server by hand): lang/*/booking/local.php,
 # config/calendar.local.php. Existing *local.php files on the server are preserved.
 set -euo pipefail
@@ -107,14 +108,20 @@ if [ "$DRY_RUN" -eq 0 ] && [ "$ASSUME_YES" -ne 1 ]; then
     esac
 fi
 
-remote_preflight="T=$RT; test -f \"\$T/.env\" || { echo \"No .env in \$T - wrong target dir or not set up yet.\" >&2; exit 1; }; \
-if [ -f \"\$T/artisan\" ]; then cd \"\$T\" && php artisan down && echo MAINTENANCE_ON; fi"
+remote_preflight="T=$RT; test -f \"\$T/.env\" || { echo \"No .env in \$T - wrong target dir or not set up yet.\" >&2; exit 1; }; if grep -Eq '^[[:space:]]*DB_CONNECTION=[\"[:space:]]*sqlite' \"\$T/.env\"; then echo \"Server .env uses DB_CONNECTION=sqlite; production must be MySQL. Refusing (the wipe would endanger database/*.sqlite).\" >&2; exit 1; fi; if [ -f \"\$T/artisan\" ]; then cd \"\$T\" && php artisan down && echo MAINTENANCE_ON; fi"
 
-remote_extract="T=$RT; cd \"\$T\" \
- && for d in app database routes resources config lang Modules; do \
-      if [ -d \"\$d\" ]; then find \"\$d\" -type f ! -name local.php ! -name '*.local.php' -delete; find \"\$d\" -depth -type d -empty -delete; fi; \
-    done \
- && tar -x --anchored --exclude=.env --exclude=storage"
+# WIPE-BEGIN
+# Removes tracked-looking files only; keeps local.php / *.local.php and any *.sqlite*.
+# Every find must succeed (explicit exit 1: set -e is ignored inside && lists).
+wipe_cmd='for d in app database routes resources config lang Modules; do
+  if [ -d "$d" ]; then
+    find "$d" -type f ! -name local.php ! -name "*.local.php" ! -name "*.sqlite*" -delete || exit 1
+    find "$d" -depth -type d -empty -delete || exit 1
+  fi
+done'
+# WIPE-END
+
+remote_extract="T=$RT; cd \"\$T\"  && ( $wipe_cmd )  && tar -x --anchored --exclude=.env --exclude=storage"
 
 remote_steps="T=$RT; cd \"\$T\" \
  && mkdir -p storage/app storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
