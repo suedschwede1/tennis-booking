@@ -29,7 +29,8 @@ return [
     ],
 
     'tournament' => [
-        'base_url' => env('TOURNAMENT_BASE_URL') ?: 'https://turnier.tcbewegung.at',
+        // Empty = same host as this app (tournament pages are routed to ZF2 by public/.htaccess).
+        'base_url' => env('TOURNAMENT_BASE_URL', ''),
     ],
 
     'slack' => [
