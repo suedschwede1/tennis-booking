@@ -86,9 +86,9 @@ final class VisualRegressionTest extends DuskTestCase
                 'sid' => $square->sid,
                 'key' => 'alias',
                 'value' => match ($number) {
-                    1 => 'Garagenplatz',
-                    2 => 'Starplatz',
-                    default => 'Leitenplatz',
+                    1 => 'Alpha Court',
+                    2 => 'Beta Court',
+                    default => 'Gamma Court',
                 },
             ]);
 
