@@ -11,7 +11,7 @@ Replaces the old Zend/Laminas system (`booking`).
 | Laravel | 13.x |
 | Database | MySQL (`booking_local`) |
 | Frontend | Tailwind CSS, Alpine.js, Vite |
-| Deployment | Shared hosting one.com, FTP |
+| Deployment | Helloly cPanel host (SSH), `scripts/deploy-helloly.sh` |
 
 ## Features
 
@@ -36,7 +36,7 @@ Replaces the old Zend/Laminas system (`booking`).
 - Booking management: list, create/edit/cancel/delete on behalf of users, statistics
 - Configuration: general options, behavior settings, squares (courts), test mail sending
 - Database page: migration status/repair via `DatabaseSchemaChecker` (no SSH/cron
-  needed on one.com), on-demand DB backup/restore/download
+  needed on shared hosting), on-demand DB backup/restore/download
 
 ### Members module (club administration)
 
@@ -111,13 +111,50 @@ php artisan test
 
 > **Important:** always run `php`/`composer` via WSL, never directly in PowerShell.
 
-## Deployment (one.com)
+## Deployment (Helloly)
 
-1. Run `npm run build` locally
-2. Commit `public/build/`
-3. Transfer changed files to the server via FTP
+Production runs on the Helloly cPanel host and is served at `https://tcbewegung.at/booking`.
 
-No Node.js on the server — the Vite build must be built and committed locally.
+- **SSH**: use the alias `helloly` (configured in `~/.ssh/config` / `~/.tcb.cnf` setup, from WSL).
+- **App directory**: `~/apps/bookingnew`, outside the web root. `public_html/booking` points
+  at the app's `public/` directory (symlink, or a rewrite if the host disallows symlinks).
+  The app therefore runs under the `/booking` base path; routes are declared without it.
+- **`.env` stays on the server only** and is never overwritten by a deploy (nor is `storage/`).
+  Set at least `APP_URL=https://tcbewegung.at/booking`, the DB credentials and
+  `TOURNAMENT_BASE_URL` (tournament pages that stay on the legacy system; defaults to
+  `https://turnier.tcbewegung.at` when empty).
+- **Mail**: SMTP via the `booking@tcbewegung.at` mailbox (`MAIL_*` in the server `.env`).
+- **Cron**: if the scheduler is used, add a cPanel cron job running
+  `php ~/apps/bookingnew/artisan schedule:run` every minute.
+- **No Node.js on the server**: run `npm run build` locally and commit `public/build/`.
+
+Deploy from WSL in the repo root with a clean, committed tree:
+
+```bash
+scripts/deploy-helloly.sh --dry-run   # print the steps, no ssh
+scripts/deploy-helloly.sh             # or: scripts/deploy-helloly.sh <target-dir>
+```
+
+The script builds assets, ships `git archive HEAD` over `ssh helloly`, then runs
+`composer install --no-dev --optimize-autoloader`, `php artisan migrate --force` and the
+`config:cache`/`route:cache`/`view:cache` steps, and prints the deployed commit.
+
+**First deploy against a database created by the old ZF2 system** (manual, deliberate, in
+this order, on the server in the app directory):
+
+1. `php artisan migrate:install`
+2. `php artisan db:baseline-legacy --dry-run`
+3. `php artisan db:baseline-legacy`
+4. `php artisan migrate --force`
+
+The deploy script never runs steps 1-3. Details:
+[docs/superpowers/specs/2026-11-04-helloly-laravel-cutover-design.md](docs/superpowers/specs/2026-11-04-helloly-laravel-cutover-design.md).
+
+Legacy ZF2 URLs (`/user/login`, `/user/bookings`, `/square/...`, `/backend/...` etc.) are
+301-redirected to their Laravel equivalents.
+
+*Historical:* before Helloly the app was hosted on one.com shared hosting (no SSH) and
+updated by FTP upload of changed files.
 
 ## Layout reference
 
