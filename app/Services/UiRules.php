@@ -4,165 +4,27 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-class UiRules
+/** Source checks complement, but cannot replace, a rendered design review. */
+final class UiRules
 {
-    public const ALLOWED_HEX = [
-        '#bf4316', '#9e3412', '#fde8e1', '#151515', '#6a6e73', '#b8b8b8',
-        '#fafafa', '#ffffff', '#e0e0e0', '#f0f0f0', '#f0faf0', '#3e8635',
-        '#f9f0f0', '#c9190b', '#f0f8ff', '#0066cc', '#fff3cd', '#f0ab00',
-        '#eff6ff', '#f4f4f4', '#1b1d21', '#a0a0a0', '#eae8e2', '#e8e8e8',
-        '#ebebeb', '#f5f5f5', '#c7c7c7', '#d1cbc0', '#8a8d90', '#1a3a6b',
-        '#7f2010', '#fff8f6', '#fff3f0', '#a84433', '#c75518',
-    ];
-
-    /** @return array<int, array<string, mixed>> */
+    /** @return list<array{id: string, pattern: string, warn: string, exclude: list<string>}> */
     public static function all(): array
     {
-        return [
-            // --- Farben ---
-            [
-                'id'      => 'CLR-01',
-                'warn'    => 'Hex-Farbe %s nicht im Design Guide — Palette in docs/DESIGN.md prüfen',
-                'pattern' => '/#([0-9a-fA-F]{6})\b/i',
-                'exclude' => ['emails/'],
-                'context' => false,
-                'hex'     => true,
-            ],
-            [
-                'id'      => 'CLR-02',
-                'warn'    => 'Fehlertext: text-red-600 verwenden, nicht text-red-500',
-                'pattern' => '/\btext-red-500\b/',
-                'exclude' => [],
-                'context' => false,
-            ],
-            [
-                'id'      => 'CLR-03',
-                'warn'    => 'Fehler-Border: border-red-400 verwenden, nicht border-red-500',
-                'pattern' => '/\bborder-red-500\b/',
-                'exclude' => [],
-                'context' => false,
-            ],
-
-            // --- Buttons ---
-            [
-                'id'      => 'BTN-01',
-                'warn'    => 'Button: bg-[#bf4316] verwenden, nicht bg-orange-*',
-                'pattern' => '/<button[^>]*bg-orange-/i',
-                'exclude' => [],
-                'context' => false,
-            ],
-            [
-                'id'      => 'BTN-02',
-                'warn'    => 'Danger-Button: bg-[#c9190b] verwenden, nicht bg-red-*',
-                'pattern' => '/<button[^>]*bg-red-/i',
-                'exclude' => [],
-                'context' => false,
-            ],
-            [
-                'id'      => 'BTN-03',
-                'warn'    => 'Button: rounded (6px) verwenden, nicht rounded-full',
-                'pattern' => '/<button[^>]*rounded-full/i',
-                'exclude' => [],
-                'context' => false,
-            ],
-            [
-                'id'      => 'BTN-04',
-                'warn'    => 'Button ohne Höhenklasse — h-9 (36px) oder h-10 (40px) prüfen',
-                'pattern' => '/<button(?!.*\bh-(?:9|10)\b)[^>]*>/i',
-                'exclude' => [],
-                'context' => false,
-            ],
-
-            // --- Inputs / Select / Textarea ---
-            [
-                'id'      => 'INP-01',
-                'warn'    => 'Formularfeld: rounded (6px) verwenden, nicht rounded-full',
-                'pattern' => '/<(?:input|select|textarea)[^>]*rounded-full/i',
-                'exclude' => [],
-                'context' => false,
-            ],
-            [
-                'id'      => 'INP-02',
-                'warn'    => 'Formularfeld: rounded (6px) verwenden, nicht rounded-lg',
-                'pattern' => '/<(?:input|select|textarea)[^>]*rounded-lg/i',
-                'exclude' => [],
-                'context' => false,
-            ],
-            [
-                'id'      => 'INP-03',
-                'warn'    => 'Formularfeld: rounded (6px) verwenden, nicht rounded-xl',
-                'pattern' => '/<(?:input|select|textarea)[^>]*rounded-xl/i',
-                'exclude' => [],
-                'context' => false,
-            ],
-            [
-                'id'      => 'INP-04',
-                'warn'    => 'Focus-Ring: focus:ring-[#bf4316] verwenden, nicht focus:ring-blue-*',
-                'pattern' => '/<input[^>]*focus:ring-blue-/i',
-                'exclude' => [],
-                'context' => false,
-            ],
-
-            // --- Badges ---
-            [
-                'id'      => 'BDG-01',
-                'warn'    => 'Badge: rounded (4px) verwenden, nicht rounded-full',
-                'pattern' => '/(?=.*\bpx-)(?=.*\bpy-)(?=.*(?:text-xs|text-\[11px\])).*\brounded-full\b/',
-                'exclude' => [],
-                'context' => false,
-            ],
-
-            // --- Tabellen (Kontext-Regeln) ---
-            [
-                'id'      => 'TBL-01',
-                'warn'    => 'Tabellenkopf: uppercase-Klasse fehlt',
-                'pattern' => '/<thead/i',
-                'exclude' => [],
-                'context' => true,
-                'context_require' => 'uppercase',
-            ],
-            [
-                'id'      => 'TBL-02',
-                'warn'    => 'Tabellenkopf: bg-[#fafafa] fehlt',
-                'pattern' => '/<thead/i',
-                'exclude' => [],
-                'context' => true,
-                'context_require' => 'bg-[#fafafa]',
-            ],
-
-            // --- Typografie ---
-            [
-                'id'      => 'TYP-01',
-                'warn'    => 'Schriftgröße unter 10px — Design-Minimum: 10px (Kalender-Ausnahme)',
-                'pattern' => '/text-\[([1-9])px\]/',
-                'exclude' => [],
-                'context' => false,
-            ],
-            [
-                'id'      => 'TYP-02',
-                'warn'    => 'Schriftart: nur Red Hat Display/Text erlaubt, nicht font-serif/font-mono',
-                'pattern' => '/\bfont-(?:serif|mono)\b/',
-                'exclude' => [],
-                'context' => false,
-            ],
-
-            // --- Modals ---
-            [
-                'id'      => 'MOD-01',
-                'warn'    => 'Modal-Header: bg-[#1b1d21] prüfen — andere bg-* Klasse gefunden',
-                'pattern' => '/modal.*\bbg-(?!\[#1b1d21\])[a-z\[#]/i',
-                'exclude' => [],
-                'context' => false,
-            ],
-
-            // --- Inline Styles ---
-            [
-                'id'      => 'STY-01',
-                'warn'    => 'Inline style-Attribut — Tailwind oder booking.css verwenden',
-                'pattern' => '/\bstyle="/',
-                'exclude' => ['emails/'],
-                'context' => false,
-            ],
+        $rules = [
+            ['CLR-03', '/(?<![\w-])(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(\s*(?:[-+.\d]|(?:srgb(?:-linear)?|display-p3|a98-rgb|prophoto-rgb|rec2020|xyz(?:-d(?:50|65))?)\b)[^;{}]*?\)/i', 'Use a named design token instead of a literal color function.'],
+            ['CLR-01', '/(?<![\w-])#[0-9a-f]{3,8}\b/i', 'Use a named design token instead of a literal color.'],
+            ['CLR-02', '/\b(?:bg|text|border|ring|accent|fill|stroke)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]{2,3}\b/', 'Use the TC Bewegung color tokens, including semantic status colors.'],
+            ['TYP-01', '/\btext-\[(?:[0-9]|10)px\]|font-size\s*:\s*(?:[0-9]|10)px\b/i', 'Text must be at least 11px; body text is 15px and mobile inputs are 17px.'],
+            ['TYP-02', '/Red[ +]Hat[ +](?:Display|Text)|\bfont-(?:serif|mono)\b/i', 'Use Barlow for body text and Barlow Condensed for display text.'],
+            ['BTN-01', '/<button\b[^>]*\b(?:h|size)-(?:[1-9]|10)\b[^>]*>/is', 'Touch controls need at least 44px; use ui.button (52px on phones).'],
+            ['INP-01', '/<(?:input|select|textarea)\b[^>]*\brounded-full\b[^>]*>/is', 'Inputs use radius-md on desktop and radius-lg on phones.'],
+            ['STY-01', '/(?<![:\w-])style\s*=\s*(?:"[^"]*"|\x27[^\x27]*\x27)/is', 'Move presentation to token-based CSS; document technical exceptions explicitly.'],
+            ['MOT-01', '/\b(?:animate-(?:spin|pulse|bounce|ping)|transition-all|bg-gradient-to-\w+)\b|(?<!repeating-)linear-gradient\s*\(/i', 'Use flat colors and short color/modal transitions with reduced-motion support.'],
         ];
+
+        return array_map(static fn (array $rule): array => [
+            'id' => $rule[0], 'pattern' => $rule[1], 'warn' => $rule[2],
+            'exclude' => ['/emails/'],
+        ], $rules);
     }
 }

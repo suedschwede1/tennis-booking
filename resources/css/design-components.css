@@ -1,0 +1,50 @@
+@font-face { font-family: Barlow; font-style: normal; font-weight: 400; font-display: swap; src: url('../fonts/barlow/Barlow-Regular.ttf') format('truetype'); }
+@font-face { font-family: Barlow; font-style: normal; font-weight: 700; font-display: swap; src: url('../fonts/barlow/Barlow-Bold.ttf') format('truetype'); }
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 700; font-display: swap; src: url('../fonts/barlow/BarlowCondensed-Bold.ttf') format('truetype'); }
+
+.tc-design {
+    margin: 0;
+    background: var(--color-ground);
+    color: var(--color-ink);
+    font: 400 15px/22px var(--font-tc-body);
+    font-variant-numeric: tabular-nums;
+}
+.tc-design *, .tc-design *::before, .tc-design *::after { box-sizing: border-box; }
+.tc-design :focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
+.tc-page { max-width: 960px; margin: auto; padding: 24px; display: grid; gap: 24px; }
+.tc-title { font: 700 40px/40px var(--font-tc-display); margin: 0; }
+.tc-card { background: var(--color-surface); border: 1px solid var(--color-line); border-radius: 12px; padding: 24px; }
+.tc-card__title { font: 700 24px/26px var(--font-tc-display); margin: 0 0 16px; }
+.tc-stack { display: grid; gap: 16px; }
+.tc-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.tc-muted { color: var(--color-ink-2); }
+.tc-button { display: inline-flex; justify-content: center; align-items: center; gap: 8px; min-height: 46px; min-width: 44px; padding: 0 16px; border: 1px solid var(--color-line-strong); border-radius: 8px; font: 700 15px/20px var(--font-tc-body); cursor: pointer; transition: background-color .15s, color .15s, border-color .15s; }
+.tc-button--primary { background: var(--color-clay); color: var(--color-on-clay); border-color: var(--color-clay); }
+.tc-button--primary:hover { background: var(--color-clay-hover); border-color: var(--color-clay-hover); }
+.tc-button--secondary { background: var(--color-surface); color: var(--color-ink); }
+.tc-button--secondary:hover { background: var(--color-sand); }
+.tc-button--danger { background: var(--color-surface); color: var(--color-danger); border-color: var(--color-danger); }
+.tc-button:disabled { opacity: .55; cursor: not-allowed; }
+.tc-field { display: grid; gap: 8px; }
+.tc-label { font-weight: 700; }
+.tc-input { width: 100%; min-height: 46px; border: 1px solid var(--color-line-strong); border-radius: 8px; background: var(--color-surface); color: var(--color-ink); padding: 10px 12px; font: inherit; }
+.tc-input[aria-invalid="true"] { border-color: var(--color-danger); }
+.tc-error { color: var(--color-danger); font-size: 13px; margin: 0; }
+.tc-badge { display: inline-flex; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; }
+.tc-badge--neutral { background: var(--color-sand); color: var(--color-ink); }
+.tc-badge--good { background: var(--color-court-soft); color: var(--color-court-ink); }
+.tc-badge--attention { background: var(--color-warn-soft); color: var(--color-warn-ink); }
+.tc-badge--problem { background: var(--color-danger-soft); color: var(--color-danger); }
+.tc-dialog { width: min(calc(100% - 32px), 480px); margin: auto; max-height: calc(100dvh - 32px); overflow: auto; box-shadow: 0 8px 24px color-mix(in srgb, var(--color-chrome) 20%, transparent); }
+.tc-dialog::backdrop { background: color-mix(in srgb, var(--color-chrome) 45%, transparent); }
+.tc-design [x-cloak] { display: none !important; }
+@media (max-width: 600px) {
+    .tc-page { padding: 16px; gap: 16px; }
+    .tc-title { font-size: 32px; line-height: 34px; }
+    .tc-card { padding: 16px; }
+    .tc-button, .tc-input { min-height: 52px; border-radius: 12px; font-size: 17px; }
+    .tc-dialog { margin: auto 0 0; border-radius: 18px 18px 0 0; width: 100%; max-height: calc(100dvh - 16px); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .tc-design *, .tc-design *::before, .tc-design *::after { transition: none !important; animation: none !important; }
+}

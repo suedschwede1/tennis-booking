@@ -9,7 +9,6 @@ use App\Models\Booking;
 use App\Models\Reservation;
 use App\Models\Square;
 use App\Models\User;
-use App\Services\PeakLimitService;
 use Carbon\Carbon;
 
 /**
@@ -28,6 +27,7 @@ final class SquareValidator
         int $quantity,
         Carbon $dateStart,
         Carbon $dateEnd,
+        ?int $excludeBookingId = null,
     ): ValidationResult {
         if (! $dateEnd->greaterThan($dateStart)) {
             return ValidationResult::fail('Booking end time must be after start time');
@@ -95,18 +95,19 @@ final class SquareValidator
                     $count = $this->getPeakActiveFutureBookingCount(
                         $user,
                         $this->peakLimitService->windows(),
+                        $excludeBookingId,
                     );
                     if ($count >= (int) $square->max_active_bookings) {
                         return ValidationResult::fail(__('booking.messages.peak_limit_reached'));
                     }
                 }
-            } elseif ($this->getActiveFutureBookingCount($user) >= (int) $square->max_active_bookings) {
+            } elseif ($this->getActiveFutureBookingCount($user, $excludeBookingId) >= (int) $square->max_active_bookings) {
                 return ValidationResult::fail(__('booking.messages.max_active_bookings_reached'));
             }
         }
 
         if ((int) $square->time_block_bookable_max > 0) {
-            $dailyUsed = $this->getDailyUsedSeconds($user, $dateStart);
+            $dailyUsed = $this->getDailyUsedSeconds($user, $dateStart, $excludeBookingId);
 
             if ($dailyUsed + $durationSeconds > (int) $square->time_block_bookable_max
                 && ! $shortTermOverrideActive
@@ -136,11 +137,12 @@ final class SquareValidator
     }
 
     /** Total booked seconds for this user on the given calendar day across all squares. */
-    private function getDailyUsedSeconds(User $user, Carbon $date): int
+    private function getDailyUsedSeconds(User $user, Carbon $date, ?int $excludeBookingId): int
     {
         $reservations = Reservation::query()
             ->join('bs_bookings', 'bs_bookings.bid', '=', 'bs_reservations.bid')
             ->where('bs_bookings.uid', $user->uid)
+            ->when($excludeBookingId !== null, fn ($q) => $q->where('bs_bookings.bid', '!=', $excludeBookingId))
             ->where('bs_bookings.visibility', 'public')
             ->whereIn('bs_bookings.status', Booking::ACTIVE_STATUSES)
             ->where('bs_reservations.date', $date->toDateString())
@@ -154,29 +156,35 @@ final class SquareValidator
         return $seconds;
     }
 
-    private function getActiveFutureBookingCount(User $user): int
+    private function getActiveFutureBookingCount(User $user, ?int $excludeBookingId): int
     {
         return Reservation::query()
             ->join('bs_bookings', 'bs_bookings.bid', '=', 'bs_reservations.bid')
             ->where('bs_bookings.uid', $user->uid)
+            ->when($excludeBookingId !== null, fn ($q) => $q->where('bs_bookings.bid', '!=', $excludeBookingId))
             ->whereIn('bs_bookings.status', Booking::ACTIVE_STATUSES)
-            ->where('bs_reservations.date', '>=', Carbon::today()->toDateString())
+            ->where(fn ($q) => $q->where('bs_reservations.date', '>', Carbon::today()->toDateString())
+                ->orWhere(fn ($today) => $today->where('bs_reservations.date', Carbon::today()->toDateString())
+                    ->where('bs_reservations.time_end', '>', Carbon::now()->format('H:i:s'))))
             ->count();
     }
 
     /** @param list<array{start: string, end: string}> $windows */
-    private function getPeakActiveFutureBookingCount(User $user, array $windows): int
+    private function getPeakActiveFutureBookingCount(User $user, array $windows, ?int $excludeBookingId): int
     {
         return Reservation::query()
             ->join('bs_bookings', 'bs_bookings.bid', '=', 'bs_reservations.bid')
             ->where('bs_bookings.uid', $user->uid)
+            ->when($excludeBookingId !== null, fn ($q) => $q->where('bs_bookings.bid', '!=', $excludeBookingId))
             ->whereIn('bs_bookings.status', Booking::ACTIVE_STATUSES)
-            ->where('bs_reservations.date', '>=', Carbon::today()->toDateString())
+            ->where(fn ($q) => $q->where('bs_reservations.date', '>', Carbon::today()->toDateString())
+                ->orWhere(fn ($today) => $today->where('bs_reservations.date', Carbon::today()->toDateString())
+                    ->where('bs_reservations.time_end', '>', Carbon::now()->format('H:i:s'))))
             ->where(function ($query) use ($windows): void {
                 foreach ($windows as $window) {
                     $query->orWhere(function ($q) use ($window): void {
                         $q->where('bs_reservations.time_start', '>=', $window['start'].':00')
-                          ->where('bs_reservations.time_start', '<',  $window['end'].':00');
+                            ->where('bs_reservations.time_start', '<', $window['end'].':00');
                     });
                 }
             })

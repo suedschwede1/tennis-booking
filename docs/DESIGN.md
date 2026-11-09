@@ -1,7 +1,7 @@
 # Design Documentation
 
-**Design system:** "TC Bewegung" (Claude design system artifact, private to the owner). This file is the in-repo copy of its rules.
-**Mockups:** design canvas "TC Bewegung – Platzbuchung Redesign" (calendar, booking, account, admin, tournaments; desktop and phone). Screenshots and sources: [`design/README.md`](design/README.md).
+**Design system:** the project design system (Claude design system artifact, private to the owner). This file is the in-repo copy of its rules.
+**Mockups:** the redesign design canvas (calendar, booking, account, admin, tournaments; desktop and phone). Screenshots and sources: [`design/README.md`](design/README.md).
 **Status:** target design. The current Blade views and `resources/css/app.css` still use the previous look (Red Hat fonts, `#bf4316`, PatternFly blue). Migrate view by view; new or touched views follow this document.
 
 **Development language:** English. All code, comments, commit messages and internal docs are written in English. Only the `lang/` translation files contain German (and English) UI text.
@@ -11,7 +11,7 @@
 1. **Phone first.** Most members book at the court or on the go. Every screen works with a thumb: tap targets at least 44px, primary actions on phones 52px high and at the bottom of the screen. This now applies to admin views as well.
 2. **Status is visible without reading.** Free, booked, own booking, event, past: each state has its own surface, not only its own text.
 3. **One primary action per screen.** Only that action uses `clay`. Everything else is an outlined white button or a text link.
-4. **Real court names.** The court alias comes first (Center Court, Court A, Court B), the number small underneath ("Platz 1").
+4. **Real court names.** The court alias comes first (e.g. "Court A", "Court B"), the number small underneath ("Platz 1").
 5. **Flat and quiet.** Flat colors, no gradients. Shadows only on dialogs and bottom sheets. No emoji. Motion limited to `transition-colors` (0.1–0.15s) and the modal fade.
 
 ## UI copy (German)
@@ -37,10 +37,10 @@ Every color comes from a token. Light values are the default; dark values are de
 | `ink` | `#1D1B18` | `#F3EEE6` | Primary text |
 | `ink-2` | `#4A443D` | `#CFC6B8` | Secondary text, meta lines |
 | `ink-3` | `#6B6359` | `#A79D8F` | Small uppercase labels; only on `ground`/`surface` |
-| `chrome` | `#1D1B18` | `#0F0E0D` | Header, admin sidebar, phone menu, highlighted cards |
+| `chrome` | `#1D1B18` | `#0F0E0D` | Admin sidebar, open phone menu, highlighted cards (not the member header) |
 | `chrome-ink` | `#E7E0D5` | `#E7E0D5` | Menu text on `chrome` |
 | `chrome-muted` | `#CFC6B8` | `#A79D8F` | Eyebrows and subtitles on `chrome` |
-| `clay` | `#B5441A` | `#E07A4F` | Club accent: primary action, active item, own booking, "du" |
+| `clay` | `#B5441A` | `#E07A4F` | Club accent: primary action, active item, today marker, "du" (not used for calendar bookings) |
 | `clay-hover` | `#8F3412` | `#F0936C` | Hover/pressed of `clay`, links |
 | `on-clay` | `#FFFFFF` | `#171513` | Text and icons on `clay` |
 | `clay-soft` | `#FBF1EB` | `#3A2419` | Selected options, your own table row |
@@ -53,8 +53,22 @@ Every color comes from a token. Light values are the default; dark values are de
 | `danger` | `#9A2B17` | `#F08A72` | Cancel, delete, reset (text or border) |
 | `danger-soft` | `#F8E1DC` | `#3D1C15` | Badges cancelled/blocked/lost |
 | `cell-free-line` | `#CFC5B5` | `#4A443D` | Dashed border of free calendar cells |
-| `cell-booked` | `#E6DFD3` | `#34302B` | Booked cells (other members, subscriptions) |
-| `cell-past-a` / `cell-past-b` | `#EDE8DF` / `#F7F4EE` | `#1F1C19` / `#252220` | Hatching of past cells |
+| `cell-own` | `#D9E6F7` | `#1C2B40` | My bookings (fill) |
+| `cell-own-line` | `#3A6BB0` | `#7FA6DD` | My bookings: 1.5px inset ring |
+| `cell-own-ink` | `#173A6B` | `#C9DAF2` | Text on `cell-own` |
+| `cell-booked` | `#ECE6DC` | `#34302B` | Bookings by other members |
+| `cell-series` | `#ECE3F3` | `#2C2238` | Recurring (series) bookings: trainings, team practice, weekly rounds |
+| `cell-series-ink` | `#4A2A6B` | `#D7C6EA` | Text on `cell-series` |
+| `cell-event` | `#CBE5D5` | `#1E3329` | Events ("Veranstaltung") such as tournaments; not court closures |
+| `cell-event-line` | `#4E8A6C` | `#6FB892` | Events: 1px inset outline around the whole multi-hour block |
+| `cell-event-ink` | `#1F5A44` | `#8FD0AE` | Text on `cell-event` |
+| `cell-match` | `#F6E7CC` | `#3A2E12` | Tournament match bookings |
+| `cell-match-line` | `#B07A1E` | `#D9A54A` | Tournament match: 1px inset ring |
+| `cell-match-ink` | `#6B4400` | `#F0C46B` | Text on `cell-match` |
+| `cell-blocked-a` / `cell-blocked-b` | `#D9D3C9` / `#E9E4DC` | `#2E2A25` / `#24211D` | Court closure ("Platzsperre"), wide grey hatching |
+| `cell-past-a` / `cell-past-b` | `#F1EDE6` / `#F9F7F3` | `#1D1A17` / `#211E1B` | Hatching of past cells, deliberately faint so the past recedes |
+
+All calendar cells use **pastel fills**; none is dark. Strong colors are reserved for the header and primary buttons.
 
 The PatternFly blue (`#0066cc`, `#2596be`) and the old green `#8BB243` are retired.
 
@@ -114,8 +128,8 @@ Minimum size: 11px (second line in calendar cells). Inputs on phones use 17px to
 | `touch-min` | 44px | Minimum height of anything tappable |
 | `control-h` | 46px | Inputs and buttons (desktop) |
 | `control-h-mobile` | 52px | Inputs and primary buttons (phone) |
-| `cell-h` | 36px | Calendar cell (desktop) |
-| `cell-h-mobile` | 48px | Calendar cell (phone) |
+| `cell-h` | 42px | Calendar cell (desktop) |
+| `cell-h-mobile` | 52px | Calendar cell (phone) |
 | `shadow-dialog` | `0 20px 50px rgba(0,0,0,0.25)` | Desktop dialog |
 | `shadow-sheet` | `0 -10px 30px rgba(0,0,0,0.2)` | Phone bottom sheet |
 
@@ -127,27 +141,59 @@ Cards: `surface`, `1px solid line`, `radius-lg`, no shadow. Lay out siblings wit
 
 **File:** `resources/views/components/layout/header.blade.php`
 
-- Full-width bar on `chrome`, content max 1400px, padding 14px 24px.
-- Left: logo in a 44px circle on `clay` (from `booking.logo_path`), club name in `display` 24px, "PLATZBUCHUNG" eyebrow.
-- Main menu: Kalender, Meine Buchungen, Vereinsmeisterschaft (only while running), Forderungspyramide, Mixed-/Fun-Turnier, Admin (permission). Items `padding: 10px 14px`, `color: chrome-ink`; active item `background: rgba(255,255,255,0.10)`, white, 600, `aria-current="page"`.
-- Right: admin mode switch, language DE/EN, avatar (links to account).
+- **Light sand header** (decided 2026-11-05): full-width bar on `ground` with a 1px `line` bottom border, content max 1400px, padding 8–14px 24px. No dark bar for members; the calendar stays the strongest element on the page.
+- Left: logo in a 36–44px circle on `clay` (from `booking.logo_path`), club name in `display` 22–24px, `ink`.
+- Main menu: Kalender, Meine Buchungen, **Turniere** (opens the tournament area with its sidebar), **Mitglieder** (permission `admin.members`), Admin (permission). Each is a single top-level entry, no dropdowns.
+  - Every item is a tap target of at least 44px height (`display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px`).
+  - Inactive items: `ink`, weight 500 (dark, readable; never a muted grey).
+  - Active item: `ink`, weight 700, a 3px `clay` underline drawn as `box-shadow: inset 0 -3px 0 clay`, no fill, `aria-current="page"`.
+  - Hover: underline in `line-strong`. Keyboard focus: `outline: 2px solid ink; outline-offset: 2px` on every link and button in the header.
+- Right: admin mode switch, language DE/EN (current language bold `ink`, other `ink-2`), avatar as a white circle with `line` border (links to account).
 - The date navigation moves out of the header into the page toolbar (see Calendar).
 
-**Phone:** logo, section title and a 44px ☰ button. The button opens a full-screen menu on `chrome` (all menu items with icons, admin mode, language, log out). **No bottom navigation bar.**
+**Phone:** the same sand bar with logo or section title and a 44px ☰ button (white, 1px `line` border, `ink` icon). The button opens a full-screen menu on `chrome` (all menu items with icons, admin mode, language, log out); the open menu may stay dark because it covers the page. **No bottom navigation bar.**
 
-### Module tabs
+Admin, members and tournaments use the **sidebar layout** (see Sidebar); the header above stays for the calendar and the personal pages.
 
-Tournament modules and admin sub-areas use tabs below the page title: `padding: 12px 16px`, 3px bottom border, active tab `border-color: clay`, `ink`, 700. They scroll horizontally on narrow screens, never wrap. On phones they become a row of pill chips.
+### Sidebar (standard layout for every area)
+
+**The sidebar is the standard.** Every area with more than one page uses the same left sidebar shell: **Admin**, **Members** and **Tournaments**. One component (`layout/admin-sidebar.blade.php`, generalized), one CSS (`ds-admin-sidebar*`), one Alpine slide-in logic.
+
+- Sidebar on `chrome`, `flex: 1 1 240px`; logo, club name and an area eyebrow ("VERWALTUNG", "MITGLIEDER", "TURNIERE") at the top, then the button "Zum Kalender".
+- Groups with `label` headings in `#A79D8F`; items 40px high, `radius-md`; the active item filled `clay` with `on-clay` text and `aria-current="page"`. Exactly one active item.
+- Content `flex: 999 1 560px`, padding 28px 32px. On phones the sidebar becomes a slide-in menu behind the ☰ button of the area (mockups `Admin-Menue-Mobil`, `Mitglieder-Menue-Mobil`, `Turnier-Menue-Mobil`).
+- No tab rows for navigating between the pages of an area; the sidebar does that. Segmented controls inside a page (e.g. "Herren / Damen", "Gruppe A–D", "Gruppenphase / KO-Phase") stay, because they filter the same page.
+- Only the calendar, "Meine Buchungen", the account page and login keep the plain light header without sidebar, so the calendar can use the full width.
+
+| Area | Eyebrow | Groups and items |
+|---|---|---|
+| Admin | VERWALTUNG | Betrieb (Übersicht, Buchungen, Veranstaltungen, Statistik) · Benutzer (Benutzerkonten, Anmeldeverlauf) · Turniere (Forderungspyramide, Meisterschaft, Auslosungen, Mixed-Turniere) · Einstellungen (Plätze, Texte, Verhalten, Datenbank, API-Tokens, Testmail) |
+| Members | MITGLIEDER | Mitglieder (Übersicht, Mitglieder, Beiträge, Rundmail, Protokoll) · Einstellungen (Geschäftsjahre, Beitragskategorien, Funktionen, Mail-Konfiguration, Datenschutz) |
+| Tournaments | TURNIERE | Forderungspyramide (Rangliste, Forderungen, Regeln) · Vereinsmeisterschaft (Übersicht, Gruppen, KO-Raster, Losprotokoll) · Mixed-/Fun-Turnier (Aktuelle Runde, Wertung). A tournament that is not running is hidden. |
+
 
 ### Admin
 
 **File:** `resources/views/components/layout/admin-sidebar.blade.php`
 
-- Sidebar on `chrome`, `flex: 1 1 240px`; logo + "VERWALTUNG" eyebrow at the top.
-- Groups with `label` headings in `#A79D8F`: **Betrieb** (Übersicht, Buchungen, Veranstaltungen, Statistik), **Mitglieder** (Mitglieder, Anmeldeverlauf), **Turniere** (Forderungspyramide, Meisterschaft, Auslosungen, Mixed-Turniere), **Einstellungen** (Plätze, Texte, Verhalten, Datenbank, API-Tokens, Testmail).
+- Uses the standard sidebar (see Sidebar) with the eyebrow "VERWALTUNG".
+- Groups with `label` headings in `#A79D8F`: **Betrieb** (Übersicht, Buchungen, Veranstaltungen, Statistik), **Benutzer** (Benutzerkonten, Anmeldeverlauf), **Turniere** (Forderungspyramide, Meisterschaft, Auslosungen, Mixed-Turniere), **Einstellungen** (Plätze, Texte, Verhalten, Datenbank, API-Tokens, Testmail).
 - Items 40px high, `radius-md`; active item filled `clay` with `on-clay` text (replaces the old left-border marker).
 - Content `flex: 999 1 560px`, padding 28px 32px. The row uses `flex-wrap: wrap`, so on phones the sidebar becomes a slide-in menu behind a ☰ button.
 - The inline `onmouseover` styles in the current sidebar are replaced by classes.
+- Admin holds **user accounts** only (logins for the booking system). Club members are not managed here.
+
+### Members area
+
+**Members ≠ users.** A *user* (`bs_users`) is a login for the booking system; a *member* (`members`) is a club membership record. A member does not need a user account, and a user does not need to be a member. The link `members.user_id` is optional and shown as "Benutzerkonto (optional)": "verknüpft" or "–". Lists, dues, exports and mail never depend on it.
+
+- Reached through the header entry **Mitglieder**; it has no entries in the admin sidebar.
+- Uses the standard sidebar (see Sidebar) with the eyebrow "MITGLIEDER" and the groups:
+  - **Mitglieder:** Übersicht, Mitglieder, Beiträge, Rundmail, Protokoll
+  - **Einstellungen:** Geschäftsjahre, Beitragskategorien, Funktionen, Mail-Konfiguration, Datenschutz
+- Page head: eyebrow "MITGLIEDERVERWALTUNG", title (`display` 36–40px), primary action on the right ("Mitglied anlegen", "Speichern"). No tab row.
+- Phone: sand bar with title and ☰ (opens the members menu), list rows as cards (name bold, "Nr. · Kategorie", status pill), detail as stacked cards, primary action as a full-width 52px button at the bottom.
+- Mockups: `Mitglieder-Uebersicht`, `Mitglieder-Liste`, `Mitglieder-Beitraege`, `Mitglieder-Rundmail`, `Mitglied-Detail`, `Mitglieder-Liste-Mobil`, `Mitglied-Detail-Mobil`, `Mitglieder-Menue-Mobil`.
 
 ## Calendar
 
@@ -156,33 +202,40 @@ Tournament modules and admin sub-areas use tabs below the page title: `padding: 
 **Goal:** the full 08:00–19:00 grid (12 rows) is visible without vertical scrolling.
 
 ### Toolbar
-- Date as `h1` (`display`, 32px), e.g. "Mittwoch, 4. November 2026". No eyebrow above it.
-- Right: previous day (44px icon button), "Heute", date field, next day; then text buttons "Infos" and "Hinweise".
-- Legend row below: Frei, Meine Buchung, Belegt, Veranstaltung, Turnierspiel, Vergangen (13px, swatch 18×14).
+- One compact row, no visible page title and no legend (the `h1` "Platzkalender" stays for screen readers only).
+- Everything right-aligned: previous day (44px icon button), "Heute", date field, next day, then the text buttons "Infos" and "Hinweise".
+- The header is compact on the calendar page (padding 8px, logo 36px, no eyebrow) so the vertical space goes to the grid.
+
+### Today
+Today is marked on its day card, not with a separate date line: a 2px `clay` ring around the card (`box-shadow`, so the layout does not shift), the day name in `clay` and a filled `clay` "HEUTE" pill. On phones the day name turns `clay` with the same pill.
 
 ### Desktop grid
-- Time column 60px: hour in 15px bold tabular, "bis 09" 11px `ink-3`, right-aligned, 36px high.
+- Time column 60px: hour in 15px bold tabular, "bis 09" 11px `ink-3`, right-aligned, 42px high.
 - One card per day (`surface`, `line`, `radius-lg`, padding 8px), three days side by side, gap 14px; wrapper `overflow-x: auto` with `min-width: 980px`.
-- Day header 36px: day name `display` 22px + date 13px `ink-3` on one line; "HEUTE" pill (`#F8E4D9` / `#8F3412`) on today.
+- Day header 30px: day name `display` 22px + date 13px `ink-3` on one line.
 - Court header 34px per court on `ground`: alias 14px bold, "Platz 1" 11px `ink-3` beneath.
-- Rows: 3 cells, gap 4px, cell height 36px.
+- Rows: 3 cells, gap 4px. The page is exactly one screen high (`height: 100vh`, no footer on the calendar page); the 12 hour rows share the remaining height (`grid-template-rows: repeat(12, minmax(0, 1fr))`), so cells grow with the window. `cell-h` (42px) is the minimum; below that the grid scrolls.
 
 ### Cell states
+
+All fills are pastel so the grid stays calm even when whole days are blocked. **My booking** is the only cell with a colored ring (blue), so it stands out by outline rather than by a loud fill. Other members' bookings are neutral sand. **Recurring (series) bookings** such as trainings, team practice or weekly rounds are light violet, one cell per hour, detail "Serie · wöchentlich". **Events** come in two kinds: tournaments and other club events are soft green with an outline; a **court closure ("Platzsperre")** is its own event kind and shows wide grey hatching (clearly darker than past slots), with the reason as the detail line. Both form one joined block across their hours. Series and events must never share a color. Single tournament match bookings are light amber with a ring.
 
 | State | Surface | Text | Element |
 |---|---|---|---|
 | Free | `surface`, `1px dashed cell-free-line` | none | `<a href>` with `aria-label` "Court A, 17:00 Uhr buchen" |
-| My booking (`cc-own`) | `clay` | `on-clay` | link to own booking / cancel dialog |
-| Booked / subscription (`cc-single-future`) | `cell-booked` | `ink` | span (link for admins) |
-| Event | `court`, joined across hours | `on-court` | first hour 40px with `margin-bottom: -4px`, following hours plain `court` |
-| Tournament match (`cc-turnier`) | `court-soft` + `box-shadow: inset 0 0 0 1px court` | `court-ink` | span |
+| My booking (`cc-own`) | `cell-own` + `box-shadow: inset 0 0 0 1.5px cell-own-line` | `cell-own-ink` | link to own booking / cancel dialog |
+| Other member's booking (`cc-single-future`) | `cell-booked` (sand) | `ink` | span (link for admins) |
+| Recurring (series) booking, e.g. training (`cc-series`) | `cell-series` (light violet), one cell per hour | `cell-series-ink`, detail "Serie · wöchentlich" | span (link for admins) |
+| Event, e.g. tournament | `cell-event` + 1px `cell-event-line` outline around the whole block (first hour: top and sides, middle: sides, last: sides and bottom), joined across hours | `cell-event-ink` | first hour `calc(100% + 4px)` with `margin-bottom: -4px`, following hours plain `cell-event` |
+| Court closure ("Platzsperre", event kind `closure`) | `repeating-linear-gradient(135deg, cell-blocked-a 0 6px, cell-blocked-b 6px 12px)`, joined across hours | `ink`, reason as detail | span (link for admins) |
+| Tournament match (`cc-turnier`) | `cell-match` + `box-shadow: inset 0 0 0 1px cell-match-line` | `cell-match-ink` | span |
 | Past (`slot-cell--past`) | `repeating-linear-gradient(135deg, cell-past-a 0 4px, cell-past-b 4px 8px)` | none | span |
 
 Cell text is **centered horizontally and vertically**: padding 4px 10px, line 1 name 13px bold, line 2 detail 11px, `line-height: 1.1`, single lines with ellipsis. Use `box-shadow` instead of `border` for outlines so text stays aligned across states.
 
 ### Phone
-- One day; header with ‹ day › buttons (44px) and "4. November 2026 · Heute".
-- Sticky court header row (alias + number), time column 52px, cells 48px.
+- One day; compact header (padding 8px) with ‹ day › buttons (44px), the day name and the "HEUTE" pill on today.
+- Sticky court header row (alias + number), time column 52px. The 12 rows fill the screen below the header (`repeat(12, minmax(44px, 1fr))`), so 08:00–19:00 is visible without scrolling on common phones.
 - Tapping a free cell opens the booking bottom sheet.
 
 ## Booking
@@ -260,6 +313,8 @@ Inline SVG, 24px grid, 2px stroke, `stroke="currentColor"`, round caps. Icon-onl
 
 ## Tournament modules (ZF2, to be ported)
 
+**Tournament area:** all tournament pages (ladder, club championship, mixed/fun tournament) use the standard sidebar with the eyebrow "TURNIERE" (see Sidebar). Page-level tabs between ladder, challenges and rules or between overview, groups and bracket are replaced by sidebar items.
+
 Forderungspyramide, Vereinsmeisterschaft, Mixed-/Fun-Turnier and Auslosung use the same tokens and components. Their own CSS prefixes (`pyr-`, `tn-`, `mx-`) map to the tokens above; their "Desktop / Handy" view switch is removed because every page is responsive.
 
 | Old meaning | Old color | New token |
@@ -285,7 +340,7 @@ Forderungspyramide, Vereinsmeisterschaft, Mixed-/Fun-Turnier and Auslosung use t
 Replace the `--color-accent-*` scale, the Red Hat font tokens and the `--ui-*` block with the tokens above in the `@theme` block (`--color-clay`, `--color-court`, `--font-display`, `--font-body`, …). Replace the Red Hat `<link>` in `layouts/app.blade.php` with the Barlow link. Prefer token classes (`bg-clay`, `text-ink-2`) over arbitrary values like `bg-[#bf4316]`.
 
 ### Calendar colors (`config/calendar.php`)
-Map `free`, `own`, `single_future`, `series`, `past` and `event` to the cell tokens above; the CSS variables in `layouts/app.blade.php` (`--cal-*`) keep their names.
+Map `free`, `own` (`cell-own`), `single_future` (`cell-booked`), `series` (`cell-series`), `past` and `event` (`cell-event`) to the cell tokens above, and add a `blocked` state for events of kind `closure`; the CSS variables in `layouts/app.blade.php` (`--cal-*`) keep their names.
 
 ### Blade component reference
 
@@ -294,11 +349,11 @@ All components live under `resources/views/components/`.
 | Component | Path | Purpose |
 |---|---|---|
 | Header | `layout/header.blade.php` | Logo, navigation, action buttons; carries class `no-print` |
-| Admin sidebar | `layout/admin-sidebar.blade.php` | Dark sidebar with grouped navigation |
+| Sidebar | `layout/admin-sidebar.blade.php` | Standard sidebar shell with grouped navigation for admin, members and tournaments |
 | Calendar grid | `calendar/grid.blade.php` | Booking table; cell clicks via Alpine `$dispatch('open-booking', {...})` |
 | Calendar modals | `calendar/modals.blade.php` | All modals in the booking flow (create booking, cancel, feedback, admin iframe) |
 
-**No Livewire.** Alpine.js is used directly on HTML elements (`x-data`, `x-show`, `x-model`, `x-transition`). There are no registered `<x-*>` component tags.
+**No Livewire.** Alpine.js is used directly on HTML elements (`x-data`, `x-show`, `x-model`, `x-transition`). Shared target-design Blade components now live under `components/ui/` (`button`, `field`, `badge`, `card`, `dialog`). Their scoped styles and self-hosted Barlow fonts can be inspected locally at `/__design`. See [DESIGN-ASSURANCE.md](DESIGN-ASSURANCE.md) for enforced checks, migration status and screenshot review.
 
 ### Popup layout pattern
 
@@ -324,7 +379,7 @@ Order is always: date start → time start → date end → time end, in a 2-col
 
 ### Members module
 
-The Members module (`app/Modules/Members`, views under `members::`) uses the same tokens plus two Alpine patterns: inline edit-in-place in list tables (`PATCH` to `*.update-field`, brief checkmark, Escape cancels) and the mail composer with templates, dynamic audiences (`MailController::audienceDefinitions()`) and a server-rendered preview.
+The Members module (`app/Modules/Members`, views under `members::`) uses the shared sidebar shell (see Members area), the same tokens, and two Alpine patterns: inline edit-in-place in list tables (`PATCH` to `*.update-field`, brief checkmark, Escape cancels) and the mail composer with templates, dynamic audiences (`MailController::audienceDefinitions()`) and a server-rendered preview.
 
 ### Loading and feedback
 

@@ -73,7 +73,7 @@ final class AdminTest extends DuskTestCase
         $target = $this->createTestUser('dusk_bulk_tgt');
 
         try {
-            $this->browse(function (Browser $browser) use ($admin): void {
+            $this->browse(function (Browser $browser) use ($admin, $target): void {
                 $browser->loginAs($admin)
                     ->visit('/admin/users?q=dusk_bulk_tgt')
                     ->script([
@@ -81,8 +81,10 @@ final class AdminTest extends DuskTestCase
                         'document.querySelector("tbody input[type=checkbox]")?.click();',
                     ]);
 
-                $browser->waitFor('button[name="action"][value="blocked"]', 3)
-                    ->click('button[name="action"][value="blocked"]');
+                $browser->waitUntil("document.querySelector('input[name=\"uids[]\"]')?.value === '".$target->uid."'")
+                    ->waitFor('button[name="action"][value="blocked"]', 3)
+                    ->click('button[name="action"][value="blocked"]')
+                    ->waitUsing(5, 100, fn (): bool => $target->fresh()?->status === 'blocked');
             });
 
             $this->assertSame('blocked', $target->fresh()?->status);

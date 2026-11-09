@@ -23,7 +23,7 @@ class DatabaseBackupServiceTest extends TestCase
     {
         parent::setUp();
         Storage::fake('local');
-        $this->backups = new DatabaseBackupService();
+        $this->backups = new DatabaseBackupService;
     }
 
     #[Test]
@@ -155,6 +155,46 @@ class DatabaseBackupServiceTest extends TestCase
         $safetyBackups = array_filter($this->backups->list(), static fn (array $b): bool => str_contains($b['filename'], '-prerestore'));
         $this->assertNotEmpty($safetyBackups);
         $this->assertStringContainsString(array_values($safetyBackups)[0]['filename'], implode(' ', $actions));
+    }
+
+    #[Test]
+    public function restoring_the_oldest_of_ten_backups_preserves_the_source_and_its_data(): void
+    {
+        DB::table('bs_options')->insert(['key' => 'restore_retention', 'value' => 'original', 'locale' => null]);
+        $oldest = $this->backups->create();
+        for ($i = 1; $i < 10; $i++) {
+            $this->travel(1)->seconds();
+            $this->backups->create();
+        }
+        DB::table('bs_options')->where('key', 'restore_retention')->update(['value' => 'changed']);
+        $this->travel(1)->seconds();
+        $this->backups->restore($oldest);
+        Storage::disk('local')->assertExists('backups/'.$oldest);
+        $this->assertSame('original', DB::table('bs_options')->where('key', 'restore_retention')->value('value'));
+        $this->assertCount(10, $this->backups->list());
+    }
+
+    #[Test]
+    public function invalid_gzip_is_rejected_before_mutating_the_database(): void
+    {
+        Storage::disk('local')->put('backups/backup-20200101_000000.sql.gz', 'invalid gzip');
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('valid gzip');
+        $this->backups->restore('backup-20200101_000000.sql.gz');
+    }
+
+    #[Test]
+    public function restoring_a_safety_backup_in_the_same_second_cannot_overwrite_its_source(): void
+    {
+        $this->freezeTime();
+        DB::table('bs_options')->insert(['key' => 'restore_same_second', 'value' => 'original', 'locale' => null]);
+        $source = $this->backups->create('prerestore');
+        $originalDump = Storage::disk('local')->get('backups/'.$source);
+        DB::table('bs_options')->where('key', 'restore_same_second')->update(['value' => 'changed']);
+        $this->backups->restore($source);
+        $this->assertSame($originalDump, Storage::disk('local')->get('backups/'.$source));
+        $this->assertSame('original', DB::table('bs_options')->where('key', 'restore_same_second')->value('value'));
+        $this->assertCount(2, $this->backups->list());
     }
 
     #[Test]

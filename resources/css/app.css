@@ -1,5 +1,7 @@
 /*! src:hm-b26c8c89 */
 @import 'tailwindcss';
+@import './design-tokens.css';
+@import './design-components.css';
 
 :root {
     --wm-src: 'hm-b26c8c89';

@@ -8,7 +8,23 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $member_id
+ * @property int $fiscal_year_id
+ * @property int $fee_category_id
+ * @property string $amount
+ * @property string|null $teilbetrag
+ * @property string|null $kommentar
+ * @property string $status
+ * @property Carbon|null $faellig_am
+ *
+ * @method static Builder<static> paid()
+ * @method static Builder<static> open()
+ * @method static Builder<static> overdue()
+ */
 class MemberDue extends Model
 {
     public const STATUSES = ['ausstehend', 'bezahlt', 'ueberfaellig'];
@@ -24,26 +40,31 @@ class MemberDue extends Model
         'faellig_am' => 'date',
     ];
 
+    /** @return BelongsTo<Member, $this> */
     public function member(): BelongsTo
     {
         return $this->belongsTo(Member::class);
     }
 
+    /** @return BelongsTo<FiscalYear, $this> */
     public function fiscalYear(): BelongsTo
     {
         return $this->belongsTo(FiscalYear::class);
     }
 
+    /** @return BelongsTo<FeeCategory, $this> */
     public function feeCategory(): BelongsTo
     {
         return $this->belongsTo(FeeCategory::class);
     }
 
+    /** @return BelongsTo<FiscalYear, $this> */
     public function bezahltBisFiscalYear(): BelongsTo
     {
         return $this->belongsTo(FiscalYear::class, 'bezahlt_bis_fiscal_year_id');
     }
 
+    /** @return BelongsToMany<Payment, $this> */
     public function payments(): BelongsToMany
     {
         return $this->belongsToMany(Payment::class, 'payment_dues');

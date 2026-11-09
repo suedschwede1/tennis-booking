@@ -1,0 +1,46 @@
+/* Canonical light palette from docs/DESIGN.md. Dark mode is not enabled yet. */
+@theme static {
+    --color-ground: #F5F1EA;
+    --color-surface: #FFFFFF;
+    --color-surface-sunk: #FAF8F4;
+    --color-sand: #EFE9DF;
+    --color-line: #E3DCD0;
+    --color-line-strong: #BDB2A2;
+    --color-ink: #1D1B18;
+    --color-ink-2: #4A443D;
+    --color-ink-3: #6B6359;
+    --color-chrome: #1D1B18;
+    --color-chrome-ink: #E7E0D5;
+    --color-chrome-muted: #CFC6B8;
+    --color-clay: #B5441A;
+    --color-clay-hover: #8F3412;
+    --color-on-clay: #FFFFFF;
+    --color-clay-soft: #FBF1EB;
+    --color-court: #1F5A44;
+    --color-on-court: #FFFFFF;
+    --color-court-soft: #E3F0E8;
+    --color-court-ink: #1F5A44;
+    --color-warn-soft: #FBEFD5;
+    --color-warn-ink: #7A4E00;
+    --color-danger: #9A2B17;
+    --color-danger-soft: #F8E1DC;
+    --color-cell-free-line: #CFC5B5;
+    --color-cell-own: #D9E6F7;
+    --color-cell-own-line: #3A6BB0;
+    --color-cell-own-ink: #173A6B;
+    --color-cell-booked: #ECE6DC;
+    --color-cell-series: #ECE3F3;
+    --color-cell-series-ink: #4A2A6B;
+    --color-cell-event: #CBE5D5;
+    --color-cell-event-line: #4E8A6C;
+    --color-cell-event-ink: #1F5A44;
+    --color-cell-match: #F6E7CC;
+    --color-cell-match-line: #B07A1E;
+    --color-cell-match-ink: #6B4400;
+    --color-cell-blocked-a: #D9D3C9;
+    --color-cell-blocked-b: #E9E4DC;
+    --color-cell-past-a: #F1EDE6;
+    --color-cell-past-b: #F9F7F3;
+    --font-tc-body: Barlow, system-ui, sans-serif;
+    --font-tc-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+}

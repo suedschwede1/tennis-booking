@@ -66,7 +66,7 @@ class UpdateBookingTool extends Tool
 
         try {
             $owner = $this->bookingService->resolveOwner($data['booked_for']);
-            [, , $occurrenceStarts, $durationSeconds] = $this->bookingService->buildOccurrenceTimeline($data);
+            [, , $occurrenceStarts, $durationSeconds] = $this->bookingService->buildOccurrenceTimeline($data, $booking);
             $booking = $this->bookingService->updateSeries(
                 $booking,
                 $data,

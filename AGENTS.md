@@ -57,6 +57,14 @@ Run `composer lint` (or at least `vendor/bin/pint` + `php artisan test`) before
 considering a change done. New/changed `.blade.php` files should also be sanity-checked
 with `php artisan view:cache` (catches Blade syntax errors) then `php artisan view:clear`.
 
+For UI/CSS changes, run `composer check:design` as well. Use the target tokens in
+`resources/css/design-tokens.css` and shared `components/ui` controls. Existing pages
+are inventoried in `ui-design-baseline.json`; never regenerate that inventory to hide
+new violations. Register migrated paths in `config/ui-design.php`, prune fixed debt,
+and inspect desktop/phone screenshots against `docs/DESIGN.md`. Visual regression
+references preserve a rendered state; they do not prove that an old page has adopted
+the target design. See `docs/DESIGN-ASSURANCE.md` for the review checklist.
+
 ## Database & permissions
 
 - No roles table. Authorization is driven by `bs_users.status` (`admin` / `assist` /

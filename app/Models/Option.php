@@ -42,8 +42,13 @@ class Option extends Model
             }
         }
 
-        return $rows->firstWhere('locale', null)?->value
-            ?? $rows->first()?->value
+        /** @var self|null $global */
+        $global = $rows->firstWhere('locale', null);
+        /** @var self|null $first */
+        $first = $rows->first();
+
+        return $global->value
+            ?? $first->value
             ?? $default;
     }
 }

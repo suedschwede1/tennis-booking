@@ -243,6 +243,7 @@
         }
      }"
      @open-booking.window="openBooking($event.detail)"
+     data-testid="booking-create-dialog"
      x-show="open"
      x-transition.opacity
      @keydown.escape.window="open = false"

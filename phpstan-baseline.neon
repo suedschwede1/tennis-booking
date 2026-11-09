@@ -13,12 +13,6 @@ parameters:
 			path: app/Http/Controllers/Admin/BookingController.php
 
 		-
-			message: '#^Negated boolean expression is always false\.$#'
-			identifier: booleanNot.alwaysFalse
-			count: 1
-			path: app/Http/Controllers/BookingController.php
-
-		-
 			message: '#^Offset int\<1, max\> does not exist on non\-empty\-list\<int\>\.$#'
 			identifier: offsetAccess.notFound
 			count: 1

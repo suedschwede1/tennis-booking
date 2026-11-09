@@ -25,6 +25,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $visibility
  * @property int $quantity Number of players
  * @property string $created DATETIME
+ * @property-read User|null $user
+ * @property-read Square|null $square
  */
 class Booking extends Model
 {

@@ -77,6 +77,9 @@ final class LoginTest extends DuskTestCase
             $this->browse(function (Browser $browser) use ($user): void {
                 $browser->loginAs($user)
                     ->visit('/calendar')
+                    ->resize(1440, 900)
+                    ->click('.app-header__action-trigger')
+                    ->waitFor('#app-header-actions.is-open')
                     ->click('form[action$="/logout"] button[type="submit"]')
                     ->waitForLocation('/login')
                     ->assertPathIs('/login');

@@ -60,7 +60,7 @@ final class BookingService
      *
      * @return array{0: Carbon, 1: Carbon, 2: list<Carbon>, 3: int} [dateStart, dateEnd, occurrenceStarts, durationSeconds]
      */
-    public function buildOccurrenceTimeline(array $data): array
+    public function buildOccurrenceTimeline(array $data, ?Booking $booking = null): array
     {
         $dateStart = Carbon::createFromFormat('Y-m-d H:i', $data['date'].' '.$data['time_start']);
         $dateEnd = Carbon::createFromFormat('Y-m-d H:i', $data['date'].' '.$data['time_end']);
@@ -72,13 +72,34 @@ final class BookingService
         $repeatType = $data['repeat_type'];
         $repeatEndDate = $repeatType === 'once'
             ? Carbon::createFromFormat('Y-m-d', $data['date'])
-            : Carbon::createFromFormat('Y-m-d', (string) ($data['date_end'] ?: $data['date']));
+            : Carbon::createFromFormat('Y-m-d', (string) (($data['date_end'] ?? null) ?: $data['date']));
 
         if ($repeatEndDate->lt($dateStart->copy()->startOfDay())) {
             throw new BookingValidationException(__('booking.validation.repeat_end_date_after_start'));
         }
 
-        $occurrenceStarts = $this->buildOccurrenceStarts($dateStart, $repeatType, $repeatEndDate);
+        if ($repeatType === 'custom') {
+            if ($booking === null) {
+                throw new BookingValidationException(__('booking.validation.no_valid_repeat'));
+            }
+            $reservations = $booking->reservations()->orderBy('date')->orderBy('time_start')->get();
+            if (! empty($data['occurrence'])) {
+                if (! $reservations->contains('date', $data['occurrence'])) {
+                    throw new BookingValidationException(__('booking.validation.no_valid_repeat'));
+                }
+                $reservations = $reservations->filter(fn (Reservation $r): bool => ($data['edit_scope'] ?? 'single_occurrence') === 'this_and_following'
+                        ? $r->date >= $data['occurrence'] : $r->date === $data['occurrence']);
+            }
+            // An irregular series has explicit dates, not an inferred interval.
+            // Changing its boundaries requires choosing a supported recurrence.
+            if ($reservations->isEmpty() || $dateStart->toDateString() !== $reservations->first()->date
+                || $repeatEndDate->toDateString() !== $reservations->last()->date) {
+                throw new BookingValidationException(__('booking.validation.no_valid_repeat'));
+            }
+            $occurrenceStarts = $reservations->map(fn (Reservation $r): Carbon => Carbon::parse($r->date.' '.$data['time_start']))->values()->all();
+        } else {
+            $occurrenceStarts = $this->buildOccurrenceStarts($dateStart, $repeatType, $repeatEndDate);
+        }
         if ($occurrenceStarts === []) {
             throw new BookingValidationException(__('booking.validation.no_valid_repeat'));
         }
@@ -475,7 +496,7 @@ final class BookingService
 
         $target->loadMissing('user');
 
-        $email = $target->user?->email ?? null;
+        $email = $target->user->email ?? null;
         if (! empty($email) && $this->isMailConfigured()) {
             dispatch(function () use ($email, $target): void {
                 try {
@@ -625,7 +646,7 @@ final class BookingService
         Carbon $dateEnd,
         ?int $excludeBookingId = null,
     ): void {
-        $result = $this->validator->validate($square, $user, $quantity, $dateStart, $dateEnd);
+        $result = $this->validator->validate($square, $user, $quantity, $dateStart, $dateEnd, $excludeBookingId);
 
         if (! $result->isValid()) {
             throw new BookingValidationException($result->getError());

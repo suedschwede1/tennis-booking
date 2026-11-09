@@ -38,7 +38,7 @@ class BookingController extends ApiController
 
         try {
             $owner = $this->bookingService->resolveOwner($data['booked_for']);
-            [, , $occurrenceStarts, $durationSeconds] = $this->bookingService->buildOccurrenceTimeline($data);
+            [, , $occurrenceStarts, $durationSeconds] = $this->bookingService->buildOccurrenceTimeline($data, $booking);
             $booking = $this->bookingService->updateSeries($booking, $data, $owner, $occurrenceStarts, $durationSeconds, $occurrenceDate, $scope);
         } catch (BookingValidationException $e) {
             return $this->error($e->getMessage(), 422);

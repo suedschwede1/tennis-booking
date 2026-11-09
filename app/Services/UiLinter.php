@@ -6,145 +6,125 @@ namespace App\Services;
 
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use RuntimeException;
 use SplFileInfo;
 
-class UiLinter
+final class UiLinter
 {
-    /** @param array<int, array<string, mixed>> $rules */
+    /** @param string|list<string> $viewsPath
+     * @param  list<array<string, mixed>>  $rules
+     */
     public function __construct(
-        private readonly string $viewsPath,
+        private readonly string|array $viewsPath,
         private readonly array $rules,
+        private readonly ?string $projectRoot = null,
     ) {}
 
-    /** @return list<array{rule: string, file: string, line: int, message: string}> */
-    public function run(): array
-    {
-        $findings = [];
-
-        foreach ($this->bladeFiles() as $file) {
-            $relativePath = str_replace($this->viewsPath . DIRECTORY_SEPARATOR, '', $file);
-            $lines = file($file, FILE_IGNORE_NEW_LINES) ?: [];
-
-            foreach ($this->rules as $rule) {
-                if ($this->isExcluded($relativePath, $rule['exclude'] ?? [])) {
-                    continue;
-                }
-
-                if ($rule['context'] ?? false) {
-                    $findings = array_merge($findings, $this->applyContextRule($rule, $lines, $relativePath));
-                } elseif ($rule['hex'] ?? false) {
-                    $findings = array_merge($findings, $this->applyHexRule($rule, $lines, $relativePath));
-                } else {
-                    $findings = array_merge($findings, $this->applyLineRule($rule, $lines, $relativePath));
-                }
-            }
-        }
-
-        return $findings;
-    }
-
     /** @return list<string> */
-    private function bladeFiles(): array
+    public function files(): array
     {
         $files = [];
-        $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($this->viewsPath));
-
-        /** @var SplFileInfo $file */
-        foreach ($iterator as $file) {
-            if ($file->isFile() && str_ends_with($file->getFilename(), '.blade.php')) {
-                $files[] = $file->getPathname();
+        foreach ((array) $this->viewsPath as $root) {
+            if (! is_dir($root)) {
+                continue;
+            }
+            foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root)) as $file) {
+                if ($file instanceof SplFileInfo && $file->isFile()
+                    && (str_ends_with($file->getFilename(), '.blade.php') || $file->getExtension() === 'css')) {
+                    $files[] = $file->getPathname();
+                }
             }
         }
+        $files = array_values(array_unique($files));
+        sort($files);
 
         return $files;
     }
 
-    /** @param list<string> $excludes */
-    private function isExcluded(string $relativePath, array $excludes): bool
-    {
-        foreach ($excludes as $prefix) {
-            if (str_starts_with($relativePath, $prefix)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * @param array<string, mixed> $rule
-     * @param list<string>         $lines
-     * @return list<array{rule: string, file: string, line: int, message: string}>
-     */
-    private function applyLineRule(array $rule, array $lines, string $relativePath): array
+    /** @return list<array{rule: string, file: string, line: int, message: string, source: string, fingerprint: string}> */
+    public function run(): array
     {
         $findings = [];
-        foreach ($lines as $i => $line) {
-            if (preg_match($rule['pattern'], $line)) {
-                $findings[] = [
-                    'rule'    => $rule['id'],
-                    'file'    => $relativePath,
-                    'line'    => $i + 1,
-                    'message' => $rule['warn'],
-                ];
+        foreach ($this->files() as $file) {
+            $relative = $this->relativePath($file);
+            $source = file_get_contents($file);
+            if ($source === false) {
+                throw new RuntimeException('Cannot read UI source: '.$relative);
             }
-        }
-        return $findings;
-    }
-
-    /**
-     * @param array<string, mixed> $rule
-     * @param list<string>         $lines
-     * @return list<array{rule: string, file: string, line: int, message: string}>
-     */
-    private function applyHexRule(array $rule, array $lines, string $relativePath): array
-    {
-        $findings = [];
-        $allowed  = array_map('strtolower', UiRules::ALLOWED_HEX);
-
-        foreach ($lines as $i => $line) {
-            preg_match_all($rule['pattern'], $line, $matches);
-            foreach ($matches[0] as $hex) {
-                if (!in_array(strtolower($hex), $allowed, true)) {
+            // Ignore comments without changing offsets or line numbers.
+            $content = preg_replace_callback('/{{--.*?--}}|<!--.*?-->|\/\*.*?\*\//s',
+                static fn (array $m): string => preg_replace('/[^\n]/', ' ', $m[0]) ?? '', $source) ?? '';
+            foreach ($this->rules as $rule) {
+                if ($this->excluded($relative, $rule['exclude'] ?? [])) {
+                    continue;
+                }
+                if (in_array($rule['id'], ['CLR-01', 'CLR-03'], true) && $relative === 'resources/css/design-tokens.css') {
+                    continue;
+                }
+                preg_match_all($rule['pattern'], $content, $matches, PREG_OFFSET_CAPTURE);
+                foreach ($matches[0] as [$match, $offset]) {
+                    if (in_array($rule['id'], ['CLR-01', 'CLR-03'], true)
+                        && ! $this->isColorContext($content, $offset, $file)) {
+                        continue;
+                    }
+                    $line = substr_count(substr($content, 0, $offset), "\n") + 1;
+                    $start = strrpos(substr($source, 0, $offset), "\n");
+                    $start = $start === false ? 0 : $start + 1;
+                    $end = strpos($source, "\n", $offset + strlen($match));
+                    $snippet = trim((string) preg_replace('/\s+/', ' ', substr($source, $start, ($end === false ? strlen($source) : $end) - $start)));
                     $findings[] = [
-                        'rule'    => $rule['id'],
-                        'file'    => $relativePath,
-                        'line'    => $i + 1,
-                        'message' => sprintf($rule['warn'], $hex),
+                        'rule' => $rule['id'], 'file' => $relative, 'line' => $line,
+                        'message' => $rule['warn'], 'source' => $snippet,
+                        'fingerprint' => hash('sha256', $relative."\0".$rule['id']."\0".$snippet."\0".$match),
                     ];
                 }
             }
         }
+
         return $findings;
     }
 
-    /**
-     * @param array<string, mixed> $rule
-     * @param list<string>         $lines
-     * @return list<array{rule: string, file: string, line: int, message: string}>
-     */
-    private function applyContextRule(array $rule, array $lines, string $relativePath): array
+    private function relativePath(string $file): string
     {
-        $findings = [];
-        $require  = $rule['context_require'] ?? '';
+        $root = $this->projectRoot ?? (is_string($this->viewsPath) ? $this->viewsPath : '');
 
-        foreach ($lines as $i => $line) {
-            if (!preg_match($rule['pattern'], $line)) {
-                continue;
-            }
+        return ltrim(substr(str_replace('\\', '/', $file), strlen(rtrim(str_replace('\\', '/', $root), '/'))), '/');
+    }
 
-            $start   = max(0, $i - 3);
-            $end     = min(count($lines) - 1, $i + 3);
-            $context = implode(' ', array_slice($lines, $start, $end - $start + 1));
-
-            if (!str_contains($context, $require)) {
-                $findings[] = [
-                    'rule'    => $rule['id'],
-                    'file'    => $relativePath,
-                    'line'    => $i + 1,
-                    'message' => $rule['warn'],
-                ];
+    private function isColorContext(string $content, int $offset, string $file): bool
+    {
+        // CSS selectors and url(#fragment) are identifiers, not colors.
+        $prefix = substr($content, 0, $offset);
+        if (preg_match('/url\(\s*[\x27\"]?[^)]*$/i', $prefix)) {
+            return false;
+        }
+        if (str_ends_with($file, '.css')) {
+            return (bool) preg_match('/(?:[;{]\s*|^)\s*[\w-]+\s*:[^;{}]*$/s', $prefix);
+        }
+        if (preg_match('/<style\b[^>]*>(?:(?!<\/style>).)*$/is', $prefix)) {
+            return (bool) preg_match('/(?:[;{]\s*|^)\s*[\w-]+\s*:[^;{}]*$/s', $prefix);
+        }
+        // Quoted style/class/SVG attributes (also Alpine-bound), including
+        // JavaScript expressions in those presentation attributes.
+        preg_match_all('/(?:^|\s)(?:[:@\w-]*class|[:@\w-]*style|fill|stroke|color|stop-color|flood-color|lighting-color)\s*=\s*([\x27\"])(.*?)\1/s', $content, $attributes, PREG_OFFSET_CAPTURE);
+        foreach ($attributes[2] as [$value, $start]) {
+            if ($offset >= $start && $offset < $start + strlen($value)) {
+                return true;
             }
         }
-        return $findings;
+
+        return false;
+    }
+
+    /** @param list<string> $excludes */
+    private function excluded(string $path, array $excludes): bool
+    {
+        foreach ($excludes as $exclude) {
+            if (str_contains('/'.$path, $exclude)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

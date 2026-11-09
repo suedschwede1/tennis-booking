@@ -7,165 +7,137 @@ namespace Tests\Unit\Services;
 use App\Services\UiLinter;
 use App\Services\UiRules;
 use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
+use PHPUnit\Framework\TestCase;
 
 class UiLinterTest extends TestCase
 {
-    private string $tmpDir;
+    private string $root;
 
     protected function setUp(): void
     {
-        parent::setUp();
-        $this->tmpDir = sys_get_temp_dir() . '/ui-linter-test-' . uniqid();
-        mkdir($this->tmpDir . '/emails', 0777, true);
+        $this->root = sys_get_temp_dir().'/ui-linter-'.bin2hex(random_bytes(8));
+        mkdir($this->root);
     }
 
     protected function tearDown(): void
     {
-        $this->rimraf($this->tmpDir);
-        parent::tearDown();
-    }
-
-    private function rimraf(string $dir): void
-    {
-        foreach (glob($dir . '/*') as $f) {
-            is_dir($f) ? $this->rimraf($f) : unlink($f);
+        $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($this->root, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST);
+        foreach ($files as $file) {
+            $file->isDir() ? rmdir($file->getPathname()) : unlink($file->getPathname());
         }
-        rmdir($dir);
+        rmdir($this->root);
     }
 
-    private function writeView(string $subpath, string $content): string
+    private function write(string $path, string $source): void
     {
-        $path = $this->tmpDir . '/' . $subpath;
-        @mkdir(dirname($path), 0777, true);
-        file_put_contents($path, $content);
-        return $path;
+        if (! is_dir(dirname($this->root.'/'.$path))) {
+            mkdir(dirname($this->root.'/'.$path), 0777, true);
+        }
+        file_put_contents($this->root.'/'.$path, $source);
     }
 
-    #[Test]
-    public function it_returns_no_findings_for_clean_blade(): void
+    private function findings(): array
     {
-        $this->writeView('clean.blade.php', '<div class="text-[#151515]">Hallo</div>');
-        $linter = new UiLinter($this->tmpDir, UiRules::all());
-        $this->assertEmpty($linter->run());
+        return (new UiLinter($this->root, UiRules::all(), $this->root))->run();
     }
 
     #[Test]
-    public function it_detects_clr02_text_red_500(): void
+    public function fragment_identifiers_selectors_and_script_strings_are_not_colors(): void
     {
-        $this->writeView('err.blade.php', '<p class="text-red-500">Fehler</p>');
-        $linter = new UiLinter($this->tmpDir, UiRules::all());
-        $findings = $linter->run();
-        $this->assertCount(1, $findings);
-        $this->assertSame('CLR-02', $findings[0]['rule']);
-        $this->assertSame(1, $findings[0]['line']);
+        $this->write('page.blade.php', '<a href="#add">Add</a><section id="add"></section><svg><use href="#abc" /></svg><script>const id = "#fff";</script>');
+        $this->write('page.css', '#add { color: var(--color-ink); fill: url(#fff); }');
+        $this->assertSame([], $this->findings());
     }
 
     #[Test]
-    public function it_detects_clr01_forbidden_hex(): void
+    public function color_functions_in_css_utilities_and_svg_are_rejected(): void
     {
-        $this->writeView('hex.blade.php', '<div style="color: #ff0000">text</div>');
-        $linter = new UiLinter($this->tmpDir, UiRules::all());
-        $findings = $linter->run();
-        $ids = array_column($findings, 'rule');
-        $this->assertContains('CLR-01', $ids);
+        $this->write('page.css', '.card { color: rgb(255, 0, 0); background: oklch(50% .2 30); }');
+        $this->write('page.blade.php', '<p class="text-[hsl(0,100%,50%)]">x</p><svg fill="#add"></svg>');
+        $rules = array_count_values(array_column($this->findings(), 'rule'));
+        $this->assertSame(3, $rules['CLR-03']);
+        $this->assertSame(1, $rules['CLR-01']);
     }
 
     #[Test]
-    public function it_skips_clr01_for_allowed_hex(): void
+    public function named_tokens_and_valid_component_sizes_are_allowed(): void
     {
-        $this->writeView('ok.blade.php', '<div class="text-[#bf4316]">ok</div>');
-        $linter = new UiLinter($this->tmpDir, UiRules::all());
-        $findings = array_filter($linter->run(), fn($f) => $f['rule'] === 'CLR-01');
-        $this->assertEmpty($findings);
+        $this->write('clean.blade.php', '<button class="bg-clay text-on-clay min-h-12 rounded-lg">Book</button><input class="rounded-lg text-[17px]">');
+        $this->assertSame([], $this->findings());
     }
 
     #[Test]
-    public function it_skips_clr01_in_emails_dir(): void
+    public function retired_and_arbitrary_colors_are_rejected_including_short_hex(): void
     {
-        $this->writeView('emails/confirm.blade.php', '<td style="color:#ff0000">text</td>');
-        $linter = new UiLinter($this->tmpDir, UiRules::all());
-        $findings = array_filter($linter->run(), fn($f) => $f['rule'] === 'CLR-01');
-        $this->assertEmpty($findings);
+        $this->write('colors.blade.php', '<p class="text-[#bf4316] bg-[#fff] border-blue-500">Text</p>');
+        $this->assertSame(['CLR-01', 'CLR-01', 'CLR-02'], array_column($this->findings(), 'rule'));
     }
 
     #[Test]
-    public function it_detects_btn01_wrong_orange(): void
+    public function multiline_small_buttons_and_small_type_are_detected(): void
     {
-        $this->writeView('btn.blade.php', '<button class="bg-orange-500 text-white">Speichern</button>');
-        $linter = new UiLinter($this->tmpDir, UiRules::all());
-        $ids = array_column($linter->run(), 'rule');
-        $this->assertContains('BTN-01', $ids);
+        $this->write('controls.blade.php', "<button\n class=\"h-9\">Book</button>\n<p class=\"text-[10px]\">Text</p>");
+        $findings = $this->findings();
+        $this->assertContains('BTN-01', array_column($findings, 'rule'));
+        $this->assertContains('TYP-01', array_column($findings, 'rule'));
+        $this->assertSame(3, $findings[0]['line']);
     }
 
     #[Test]
-    public function it_detects_inp02_rounded_lg_on_input(): void
+    public function css_and_multiple_view_roots_are_scanned_but_other_files_are_not(): void
     {
-        $this->writeView('inp.blade.php', '<input type="text" class="border rounded-lg px-3">');
-        $linter = new UiLinter($this->tmpDir, UiRules::all());
-        $ids = array_column($linter->run(), 'rule');
-        $this->assertContains('INP-02', $ids);
+        $this->write('resources/views/a.blade.php', '<p class="text-red-500">x</p>');
+        $this->write('app/Modules/Members/resources/views/mail/index.blade.php', '<p class="text-blue-500">x</p>');
+        $this->write('resources/css/sample.css', '.card { color: #0066cc; font-family: "Red Hat Text"; }');
+        $this->write('resources/views/ignored.php', '#ff0000');
+        $linter = new UiLinter([$this->root.'/resources', $this->root.'/app/Modules'], UiRules::all(), $this->root);
+        $this->assertCount(3, $linter->files());
+        $this->assertCount(4, $linter->run());
+        $this->assertContains('app/Modules/Members/resources/views/mail/index.blade.php', array_column($linter->run(), 'file'));
     }
 
     #[Test]
-    public function it_detects_tbl01_thead_without_uppercase(): void
+    public function comments_and_email_templates_are_excluded_without_losing_line_numbers(): void
     {
-        $content = implode("\n", [
-            '<table>',
-            '<thead class="bg-[#fafafa]">',
-            '<tr><th>Name</th></tr>',
-            '</thead>',
-            '</table>',
-        ]);
-        $this->writeView('tbl.blade.php', $content);
-        $linter = new UiLinter($this->tmpDir, UiRules::all());
-        $ids = array_column($linter->run(), 'rule');
-        $this->assertContains('TBL-01', $ids);
+        $this->write('emails/mail.blade.php', '<p style="color:#f00">Mail</p>');
+        $this->write('page.blade.php', "{{-- #f00 --}}\n<!-- #0f0 -->\n<p class=\"text-[#00f]\">Text</p>");
+        $this->assertCount(1, $this->findings());
+        $this->assertSame(3, $this->findings()[0]['line']);
     }
 
     #[Test]
-    public function it_does_not_flag_tbl01_when_uppercase_present(): void
+    public function inserting_lines_preserves_a_fingerprint_but_changing_the_violation_does_not(): void
     {
-        $content = implode("\n", [
-            '<table>',
-            '<thead class="bg-[#fafafa] uppercase tracking-wide">',
-            '<tr><th>Name</th></tr>',
-            '</thead>',
-            '</table>',
-        ]);
-        $this->writeView('tbl_ok.blade.php', $content);
-        $linter = new UiLinter($this->tmpDir, UiRules::all());
-        $ids = array_column($linter->run(), 'rule');
-        $this->assertNotContains('TBL-01', $ids);
+        $this->write('page.blade.php', '<p class="text-[#f00]">Text</p>');
+        $original = $this->findings()[0]['fingerprint'];
+        $this->write('page.blade.php', "\n\n".'<p class="text-[#f00]">Text</p>');
+        $this->assertSame($original, $this->findings()[0]['fingerprint']);
+        $this->write('page.blade.php', '<p class="text-[#0f0]">Text</p>');
+        $this->assertNotSame($original, $this->findings()[0]['fingerprint']);
     }
 
     #[Test]
-    public function it_detects_sty01_inline_style(): void
+    public function canonical_palette_matches_the_documented_light_tokens(): void
     {
-        $this->writeView('sty.blade.php', '<div style="color: red">text</div>');
-        $linter = new UiLinter($this->tmpDir, UiRules::all());
-        $ids = array_column($linter->run(), 'rule');
-        $this->assertContains('STY-01', $ids);
-    }
-
-    #[Test]
-    public function it_skips_sty01_in_emails_dir(): void
-    {
-        $this->writeView('emails/mail.blade.php', '<td style="color:red">text</td>');
-        $linter = new UiLinter($this->tmpDir, UiRules::all());
-        $ids = array_column($linter->run(), 'rule');
-        $this->assertNotContains('STY-01', $ids);
-    }
-
-    #[Test]
-    public function finding_contains_file_line_rule_message(): void
-    {
-        $this->writeView('f.blade.php', '<p class="text-red-500">x</p>');
-        $linter = new UiLinter($this->tmpDir, UiRules::all());
-        $f = $linter->run()[0];
-        $this->assertArrayHasKey('rule', $f);
-        $this->assertArrayHasKey('file', $f);
-        $this->assertArrayHasKey('line', $f);
-        $this->assertArrayHasKey('message', $f);
+        $root = dirname(__DIR__, 3);
+        $docs = file_get_contents($root.'/docs/DESIGN.md');
+        $css = file_get_contents($root.'/resources/css/design-tokens.css');
+        preg_match_all('/^\| `([\w-]+)` \| `(#\w{6})` \|/m', $docs, $tokens, PREG_SET_ORDER);
+        $this->assertGreaterThan(20, count($tokens));
+        foreach ($tokens as $token) {
+            $this->assertStringContainsString('--color-'.$token[1].': '.$token[2].';', $css);
+        }
+        $expected = array_column($tokens, 2, 1);
+        preg_match_all('/^\| `([\w-]+)` \/ `([\w-]+)` \| `(#\w{6})` \/ `(#\w{6})`/m', $docs, $pairs, PREG_SET_ORDER);
+        $this->assertCount(2, $pairs);
+        foreach ($pairs as $pair) {
+            $expected[$pair[1]] = $pair[3];
+            $expected[$pair[2]] = $pair[4];
+        }
+        preg_match_all('/--color-([\w-]+):\s*(#\w{6});/', $css, $actual, PREG_SET_ORDER);
+        $actual = array_column($actual, 2, 1);
+        ksort($expected);
+        ksort($actual);
+        $this->assertSame($expected, $actual, 'Palette changes must also update the design contract.');
     }
 }

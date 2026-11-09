@@ -70,7 +70,12 @@ final class LoginVerificationController extends Controller
             return redirect()->route('login.verify.show')->withErrors(['code' => __('booking.auth.verify.invalid')]);
         }
 
-        $user = User::findOrFail($pending['user_id']);
+        $user = User::find($pending['user_id']);
+        if (! $user || ! $user->isEnabled()) {
+            $request->session()->forget('login.pending_verification');
+
+            return redirect()->route('login')->withErrors(['email' => __('booking.auth.invalid')]);
+        }
         $ip = (string) ($pending['ip'] ?? $request->ip());
         $countryCode = isset($pending['country_code']) ? (string) $pending['country_code'] : null;
         $riskFlags = is_array($pending['risk_flags'] ?? null)
@@ -79,7 +84,7 @@ final class LoginVerificationController extends Controller
 
         LoginHistory::record($user->getKey(), $ip, $countryCode, 'success', $riskFlags);
 
-        Auth::loginUsingId($user->getKey(), (bool) $pending['remember']);
+        Auth::loginUsingId($user->getKey(), (bool) $pending['remember'] && ! $user->isPrivileged());
         $request->session()->regenerate();
         $request->session()->forget('login.pending_verification');
 
@@ -102,6 +107,13 @@ final class LoginVerificationController extends Controller
 
         $key = 'login-verify-resend:'.$pending['user_id'];
 
+        $user = User::find($pending['user_id']);
+        if (! $user || ! $user->isEnabled()) {
+            $request->session()->forget('login.pending_verification');
+
+            return redirect()->route('login')->withErrors(['email' => __('booking.auth.invalid')]);
+        }
+
         if (! RateLimiter::tooManyAttempts($key, 1)) {
             RateLimiter::hit($key, (int) config('booking.login_verification.resend_decay_seconds'));
 
@@ -110,8 +122,6 @@ final class LoginVerificationController extends Controller
             $newPending['code_hash'] = Hash::make($code);
             $newPending['expires_at'] = now()->addMinutes((int) config('booking.login_verification.code_ttl_minutes'))->toIso8601String();
             $newPending['attempts'] = 0;
-
-            $user = User::findOrFail($pending['user_id']);
 
             try {
                 Mail::to($user->email)->send(new LoginVerificationCode($code));

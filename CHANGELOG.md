@@ -8,6 +8,18 @@ reference point is `mobile-view-stable` (see [README.md](README.md#layout-refere
 When adding an entry: describe the *why*/user-facing effect in one line, not the diff —
 `git log` already has that. Add new entries at the top, under today's date.
 
+## 2026-11-09
+
+- Preserve irregular booking dates on edits, reject unsupported custom creation, and keep completed slots and the edited booking out of future-usage limits.
+- Protect the selected restore source from backup retention pruning and reject missing/corrupt gzip before changing data.
+- Redact anonymized identities from all history snapshots, repair existing records with a data migration, and enforce protected-field locks across web/REST/MCP and stale model instances.
+- Preserve resting member status during unrelated edits and reject pending login verification/resend after an account becomes ineligible.
+- Align all light design tokens with the design contract, distinguish HTML fragments from colors, detect CSS color functions, and remove duplicate test registrations and static-analysis errors.
+
+## 2026-11-05
+
+- Added enforceable target-design checks across application and module views/CSS, a shrinking legacy inventory, shared accessible controls with a local preview, and repeatable visual review checks to prevent new design drift during migration.
+
 ## 2026-11-04
 
 - Fix HTTP 500 when `public/` is served through a symlink (Apache + PHP-FPM keeps `__DIR__` unresolved): `public/index.php` and `public/zf2-bridge.php` now derive the application root from `realpath(__DIR__)`, so vendor, bootstrap, maintenance file, `zf2.path` and the default ZF2 dir are found at the real location.

@@ -3,6 +3,15 @@
 Laravel-based court booking system for a tennis club.
 Replaces the old Zend/Laminas system (`booking`).
 
+## Design checks
+
+Run `wsl composer check:design` for UI/CSS changes (or `composer check:design` inside
+WSL). It blocks new design violations while tracking existing migration debt. Shared
+target-design controls are available at `/__design` in local/test environments only.
+The GitHub `Design checks` workflow checks source rules and reviewed screenshots.
+See [Design assurance](docs/DESIGN-ASSURANCE.md) for migration status, references and
+the visual/accessibility review checklist.
+
 ## Stack
 
 | Component | Version |

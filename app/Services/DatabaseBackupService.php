@@ -21,8 +21,11 @@ use Throwable;
 final class DatabaseBackupService
 {
     private const DISK = 'local';
+
     private const DIRECTORY = 'backups';
+
     private const MAX_BACKUPS = 10;
+
     private const INSERT_BATCH_SIZE = 500;
 
     /**
@@ -52,10 +55,14 @@ final class DatabaseBackupService
         return $backups;
     }
 
-    public function create(?string $suffix = null): string
+    public function create(?string $suffix = null, ?string $protectedFilename = null): string
     {
-        $filename = 'backup-'.Carbon::now()->format('Ymd_His').($suffix !== null ? "-{$suffix}" : '').'.sql.gz';
-        $path = self::DIRECTORY.'/'.$filename;
+        $timestamp = Carbon::now();
+        do {
+            $filename = 'backup-'.$timestamp->format('Ymd_His').($suffix !== null ? "-{$suffix}" : '').'.sql.gz';
+            $path = self::DIRECTORY.'/'.$filename;
+            $timestamp->addSecond();
+        } while (Storage::disk(self::DISK)->exists($path));
 
         try {
             Storage::disk(self::DISK)->put($path, gzencode($this->buildDump(), 9));
@@ -65,7 +72,7 @@ final class DatabaseBackupService
             throw $e;
         }
 
-        $this->prune();
+        $this->prune($protectedFilename);
 
         return $filename;
     }
@@ -85,10 +92,16 @@ final class DatabaseBackupService
      */
     public function restore(string $filename): array
     {
-        $safetyBackup = $this->create('prerestore');
+        // Retention pruning while creating the safety backup must not remove
+        // the selected source. Read and validate it before creating anything.
+        $compressed = Storage::disk(self::DISK)->get(self::DIRECTORY.'/'.$filename);
+        $sql = is_string($compressed) ? @gzdecode($compressed) : false;
+        if ($sql === false || trim($sql) === '') {
+            throw new RuntimeException('Backup is missing, empty or not a valid gzip file.');
+        }
+        $safetyBackup = $this->create('prerestore', $filename);
         $actions = ["Sicherheits-Backup erstellt: {$safetyBackup}"];
 
-        $sql = gzdecode(Storage::disk(self::DISK)->get(self::DIRECTORY.'/'.$filename));
         $statements = array_values(array_filter(
             array_map('trim', explode("\n", $sql)),
             static fn (string $s): bool => $s !== '',
@@ -135,7 +148,7 @@ final class DatabaseBackupService
      * inserts parent-before-child via each table's real FK metadata works
      * regardless of whether FK enforcement is actually off.
      *
-     * @param array<int, string> $dataStatements
+     * @param  array<int, string>  $dataStatements
      * @return array<int, string>
      */
     private function orderInsertsByDependency(array $dataStatements): array
@@ -157,7 +170,7 @@ final class DatabaseBackupService
     }
 
     /**
-     * @param array<int, string> $tables
+     * @param  array<int, string>  $tables
      * @return array<int, string>
      */
     private function topologicallySortedTables(array $tables): array
@@ -252,10 +265,19 @@ final class DatabaseBackupService
         return $statements;
     }
 
-    private function prune(): void
+    private function prune(?string $protectedFilename = null): void
     {
-        foreach (array_slice($this->list(), self::MAX_BACKUPS) as $backup) {
+        $backups = $this->list();
+        $excess = count($backups) - self::MAX_BACKUPS;
+        foreach (array_reverse($backups) as $backup) {
+            if ($excess <= 0) {
+                break;
+            }
+            if ($backup['filename'] === $protectedFilename) {
+                continue;
+            }
             $this->delete($backup['filename']);
+            $excess--;
         }
     }
 

@@ -1,12 +1,29 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-Ox21jKlf.css",
+    "file": "assets/app-BAEIPgdb.css",
     "name": "app",
     "names": [
       "app.css"
     ],
     "src": "resources/css/app.css",
-    "isEntry": true
+    "isEntry": true,
+    "assets": [
+      "assets/Barlow-Regular-BeTQORF1.ttf",
+      "assets/Barlow-Bold-CqhdknQi.ttf",
+      "assets/BarlowCondensed-Bold-v1X23fbx.ttf"
+    ]
+  },
+  "resources/fonts/barlow/Barlow-Bold.ttf": {
+    "file": "assets/Barlow-Bold-CqhdknQi.ttf",
+    "src": "resources/fonts/barlow/Barlow-Bold.ttf"
+  },
+  "resources/fonts/barlow/Barlow-Regular.ttf": {
+    "file": "assets/Barlow-Regular-BeTQORF1.ttf",
+    "src": "resources/fonts/barlow/Barlow-Regular.ttf"
+  },
+  "resources/fonts/barlow/BarlowCondensed-Bold.ttf": {
+    "file": "assets/BarlowCondensed-Bold-v1X23fbx.ttf",
+    "src": "resources/fonts/barlow/BarlowCondensed-Bold.ttf"
   },
   "resources/js/app.js": {
     "file": "assets/app-B2YBUhMm.js",

@@ -7,6 +7,7 @@ namespace App\Modules\Members\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/** @property string $amount */
 class FeeCategoryRate extends Model
 {
     protected $fillable = ['fee_category_id', 'fiscal_year_id', 'amount'];

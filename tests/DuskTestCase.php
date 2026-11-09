@@ -17,7 +17,7 @@ abstract class DuskTestCase extends BaseTestCase
     #[BeforeClass]
     public static function prepare(): void
     {
-        if (! static::runningInSail()) {
+        if (! static::runningInSail() && ! filter_var(env('DUSK_SKIP_CHROMEDRIVER', false), FILTER_VALIDATE_BOOL)) {
             static::startChromeDriver(['--port=9515']);
         }
     }
@@ -33,6 +33,7 @@ abstract class DuskTestCase extends BaseTestCase
             '--disable-search-engine-choice-screen',
             '--disable-smooth-scrolling',
             '--no-sandbox',
+            '--lang=en-GB',
         ])->unless($this->hasHeadlessDisabled(), function (Collection $items) {
             return $items->merge([
                 '--disable-gpu',
@@ -41,6 +42,7 @@ abstract class DuskTestCase extends BaseTestCase
         })->all());
 
         $binary = $_ENV['DUSK_CHROME_BINARY'] ?? env('DUSK_CHROME_BINARY');
+        $options->setExperimentalOption('prefs', ['intl.accept_languages' => 'en-GB,en']);
 
         if (! $binary && is_executable('/snap/bin/chromium')) {
             $binary = '/snap/bin/chromium';
@@ -48,6 +50,12 @@ abstract class DuskTestCase extends BaseTestCase
 
         if ($binary) {
             $options->setBinary($binary);
+        }
+
+        // Confined browsers need a shared profile path so ChromeDriver can
+        // read DevToolsActivePort outside the browser's private /tmp mount.
+        if ($profile = env('DUSK_CHROME_USER_DATA_DIR')) {
+            $options->addArguments(['--user-data-dir='.$profile]);
         }
 
         return RemoteWebDriver::create(

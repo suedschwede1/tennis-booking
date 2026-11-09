@@ -10,7 +10,9 @@ use App\Modules\Members\Models\FeeCategory;
 use App\Modules\Members\Models\FiscalYear;
 use App\Modules\Members\Models\Member;
 use App\Modules\Members\Models\MemberChange;
+use App\Modules\Members\Models\MemberDue;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,6 +51,7 @@ class MemberController
         $zahlungFilter = $request->string('zahlung')->value();
         if (in_array($zahlungFilter, ['bezahlt', 'ausstehend', 'ueberfaellig'], true)) {
             $query->whereHas('dues', function ($dueQuery) use ($zahlungFilter) {
+                /** @var Builder<MemberDue> $dueQuery */
                 match ($zahlungFilter) {
                     'bezahlt' => $dueQuery->where('status', 'bezahlt'),
                     'ausstehend' => $dueQuery->where('status', 'ausstehend')
@@ -210,7 +213,7 @@ class MemberController
             'value' => match ($validated['field']) {
                 'joined_at' => $member->joined_at->format('d.m.Y'),
                 'left_at' => $member->left_at?->format('d.m.Y') ?? '—',
-                'fee_category_id' => $member->feeCategory?->name ?? '—',
+                'fee_category_id' => $member->feeCategory->name ?? '—',
                 'email' => $member->email ?? '—',
                 'phone' => $member->phone ?? '—',
                 default => (string) $member->{$validated['field']},

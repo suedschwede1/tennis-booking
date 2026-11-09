@@ -25,6 +25,12 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\LocaleController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/__design', function () {
+    abort_unless(app()->environment(['local', 'testing', 'dusk.local']), 404);
+
+    return view('design.preview');
+})->name('design.preview');
+
 Route::get('/login', [LoginController::class, 'showForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/logout', [LogoutController::class, 'logout'])->name('logout');

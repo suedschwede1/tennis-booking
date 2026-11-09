@@ -167,7 +167,7 @@ final class BookingController extends Controller
                 ->values()
                 ->all();
             $followingRepeatType = $this->detectRepeatType($followingReservations);
-            $followingRepeatEndDate = $reservations->last()?->date ?? $occurrenceReservation->date;
+            $followingRepeatEndDate = $repeatEndDate;
             $repeatType = 'once';
             $repeatEndDate = $occurrenceReservation->date;
         }
@@ -206,7 +206,7 @@ final class BookingController extends Controller
         try {
             $data = $this->validateBookingData($request);
             $owner = $this->bookingService->resolveOwner($data['booked_for']);
-            [, , $occurrenceStarts, $durationSeconds] = $this->bookingService->buildOccurrenceTimeline($data);
+            [, , $occurrenceStarts, $durationSeconds] = $this->bookingService->buildOccurrenceTimeline($data, $booking);
             [$occurrenceDate, $scope] = $this->resolveOccurrenceScope($request);
 
             $this->bookingService->updateSeries($booking, $data, $owner, $occurrenceStarts, $durationSeconds, $occurrenceDate, $scope);
@@ -286,6 +286,8 @@ final class BookingController extends Controller
             'status' => ['nullable', 'in:single,subscription,cancelled'],
             'mitspieler' => ['required', 'string', 'max:255'],
             'admin_note' => ['nullable', 'string', 'max:2000'],
+            'occurrence' => ['nullable', 'date_format:Y-m-d'],
+            'edit_scope' => ['nullable', 'in:single_occurrence,this_and_following'],
         ]);
 
         return $data;
