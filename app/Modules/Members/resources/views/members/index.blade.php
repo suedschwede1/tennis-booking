@@ -12,6 +12,14 @@
     <div class="ui-card">
         <div class="ui-card-body ui-stack">
             <form method="GET" action="{{ route('members.index') }}" class="ui-row">
+                <div class="ui-field">
+                    <label class="ui-label" for="mi-year">{{ __('members::admin.fiscal_years.title') }}</label>
+                    <select id="mi-year" name="fiscal_year_id" class="ui-select">
+                        @foreach($fiscalYears as $year)
+                            <option value="{{ $year->id }}" @selected($selectedFiscalYearId === $year->id)>{{ $year->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="ui-field min-w-[14rem]">
                     <label class="ui-label" for="mi-search">{{ __('members::admin.members.search') }}</label>
                     <input id="mi-search" type="text" name="search" value="{{ $filters['search'] ?? '' }}" class="ui-input">
@@ -139,7 +147,7 @@
                                 @if($latestDue = $member->dues->sortByDesc(fn ($due) => $due->fiscalYear->starts_on)->first())
                                     x-data="{
                                         editing: false, error: null, justSaved: false,
-                                        value: @js($latestDue->status),
+                                        value: @js($latestDue->displayStatus()),
                                         displayValue: @js($latestDue->displayStatus()),
                                         bezahltBis: @js($latestDue->bezahlt_bis_fiscal_year_id ?? ''),
                                         kommentar: @js($latestDue->kommentar ?? ''),

@@ -202,6 +202,7 @@
                 <thead>
                     <tr>
                         <th>{{ __('members::admin.mail.sent_at') }}</th>
+                        <th>{{ __('members::admin.review.mail_status') }}</th>
                         <th>{{ __('members::admin.mail.sent_by') }}</th>
                         <th>{{ __('members::admin.mail.audience') }}</th>
                         <th>{{ __('members::admin.mail.subject') }}</th>
@@ -212,13 +213,14 @@
                     @forelse($mailSendItems as $mailSend)
                         <tr>
                             <td>{{ $mailSend->created_at?->format('d.m.Y H:i') }}</td>
+                            <td>{{ __('members::admin.review.mail_'.($mailSend->status ?? 'unknown')) }} @if($mailSend->submitted_at) · {{ $mailSend->submitted_at->format('d.m.Y H:i') }} @endif</td>
                             <td>{{ $mailSend->sender?->alias ?? '—' }}</td>
                             <td>{{ $mailSend->audience_label }}</td>
                             <td>{{ $mailSend->subject }}</td>
                             <td>{{ $mailSend->recipient_count }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="text-[#6a6e73]">{{ __('members::admin.mail.no_history') }}</td></tr>
+                        <tr><td colspan="6" class="tc-muted">{{ __('members::admin.mail.no_history') }}</td></tr>
                     @endforelse
                 </tbody>
             </table>

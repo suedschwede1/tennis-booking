@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Modules\Members\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 
 /**
  * @property int $id
@@ -20,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $kommentar
  * @property string $status
  * @property Carbon|null $faellig_am
+ * @property-read Collection<int, Payment> $payments
  *
  * @method static Builder<static> paid()
  * @method static Builder<static> open()
@@ -67,12 +70,30 @@ class MemberDue extends Model
     /** @return BelongsToMany<Payment, $this> */
     public function payments(): BelongsToMany
     {
-        return $this->belongsToMany(Payment::class, 'payment_dues');
+        return $this->belongsToMany(Payment::class, 'payment_dues')->whereNull('payments.voided_at');
+    }
+
+    public function save(array $options = []): bool
+    {
+        if (! $this->exists) {
+            return parent::save($options);
+        }
+
+        return $this->getConnection()->transaction(function () use ($options): bool {
+            static::whereKey($this->getKey())->lockForUpdate()->first();
+            if (($this->isDirty('amount') || ($this->isDirty('status') && $this->status !== 'bezahlt'))
+                && $this->payments()->lockForUpdate()->first() !== null) {
+                throw ValidationException::withMessages(['status' => __('members::admin.dues.payment_locked')]);
+            }
+
+            return parent::save($options);
+        });
     }
 
     public function isPaid(): bool
     {
-        return $this->status === 'bezahlt' || $this->payments()->exists();
+        return $this->status === 'bezahlt'
+            || ($this->relationLoaded('payments') ? $this->payments->isNotEmpty() : $this->payments()->exists());
     }
 
     public function scopePaid(Builder $query): Builder
@@ -89,7 +110,7 @@ class MemberDue extends Model
 
     public function scopeOverdue(Builder $query): Builder
     {
-        return $query->where(function (Builder $query): void {
+        return $this->scopeOpen($query)->where(function (Builder $query): void {
             $query->where('status', 'ueberfaellig')
                 ->orWhere(function (Builder $query): void {
                     $query->where('status', 'ausstehend')
@@ -102,6 +123,10 @@ class MemberDue extends Model
     /** Der angezeigte Status: "ausstehend" mit verstrichenem Fälligkeitsdatum gilt automatisch als "überfällig". */
     public function displayStatus(): string
     {
+        if ($this->isPaid()) {
+            return 'bezahlt';
+        }
+
         if ($this->status === 'ausstehend' && $this->faellig_am !== null && $this->faellig_am->endOfDay()->isPast()) {
             return 'ueberfaellig';
         }

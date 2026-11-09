@@ -27,7 +27,10 @@ class MemberController
 
     public function index(Request $request): View
     {
-        $query = Member::query()->with(['feeCategory', 'dues.fiscalYear']);
+        $fiscalYears = FiscalYear::query()->orderBy('starts_on')->get();
+        $currentYear = $fiscalYears->first(fn (FiscalYear $year) => now()->between($year->starts_on, $year->ends_on));
+        $selectedFiscalYearId = $request->integer('fiscal_year_id', $currentYear->id ?? $fiscalYears->last()->id ?? 0);
+        $query = Member::query()->with(['feeCategory', 'dues' => fn ($dues) => $dues->where('fiscal_year_id', $selectedFiscalYearId)->with('fiscalYear', 'payments')]);
 
         $statusFilter = $request->string('status')->value();
         if (in_array($statusFilter, Member::STATUSES, true)) {
@@ -50,11 +53,12 @@ class MemberController
 
         $zahlungFilter = $request->string('zahlung')->value();
         if (in_array($zahlungFilter, ['bezahlt', 'ausstehend', 'ueberfaellig'], true)) {
-            $query->whereHas('dues', function ($dueQuery) use ($zahlungFilter) {
+            $query->whereHas('dues', function ($dueQuery) use ($zahlungFilter, $selectedFiscalYearId) {
+                $dueQuery->where('fiscal_year_id', $selectedFiscalYearId);
                 /** @var Builder<MemberDue> $dueQuery */
                 match ($zahlungFilter) {
-                    'bezahlt' => $dueQuery->where('status', 'bezahlt'),
-                    'ausstehend' => $dueQuery->where('status', 'ausstehend')
+                    'bezahlt' => $dueQuery->paid(),
+                    'ausstehend' => $dueQuery->open()->where('status', 'ausstehend')
                         ->where(fn ($q) => $q->whereNull('faellig_am')->orWhere('faellig_am', '>=', now()->toDateString())),
                     'ueberfaellig' => $dueQuery->overdue(),
                 };
@@ -64,11 +68,12 @@ class MemberController
         return view('members::members.index', [
             'members' => $query->orderBy('lastname')->orderBy('firstname')->paginate(25)->withQueryString(),
             'filters' => array_filter(
-                $request->only('status', 'search', 'fee_category', 'zahlung'),
+                $request->only('status', 'search', 'fee_category', 'zahlung', 'fiscal_year_id'),
                 fn ($value) => $value !== null && $value !== '',
             ),
             'feeCategories' => FeeCategory::query()->orderBy('name')->get(),
-            'fiscalYears' => FiscalYear::query()->orderBy('starts_on')->get(),
+            'fiscalYears' => $fiscalYears,
+            'selectedFiscalYearId' => $selectedFiscalYearId,
         ]);
     }
 
@@ -99,10 +104,15 @@ class MemberController
             'city' => ['nullable', 'string', 'max:128'],
             'fee_category_id' => ['nullable', 'exists:fee_categories,id'],
             'joined_at' => ['required', 'date'],
+            'left_at' => ['nullable', 'date', 'after_or_equal:joined_at'],
+            'notiz' => ['nullable', 'string', 'max:5000'],
+            'club_roles' => ['array'],
+            'club_roles.*' => ['integer', 'distinct', 'exists:club_roles,id'],
         ]);
 
         DB::transaction(function () use ($request, $validated) {
-            $member = Member::create($validated);
+            $member = Member::create(collect($validated)->except(['club_roles', 'left_at'])->all());
+            $member->setLeftAt($validated['left_at'] ?? null);
             $member->clubRoles()->sync($request->input('club_roles', []));
             $this->logChange($member, 'created', null);
         });
@@ -118,6 +128,7 @@ class MemberController
             'clubRoles' => ClubRole::query()->orderByDesc('is_board')->orderBy('name')->get(),
             'fiscalYears' => FiscalYear::query()->orderBy('starts_on')->get(),
             'dues' => $member->dues()->with('fiscalYear', 'feeCategory')->get()->sortByDesc(fn ($due) => $due->fiscalYear->starts_on),
+            'payments' => $member->payments()->with('dues.fiscalYear')->orderByDesc('paid_at')->orderByDesc('id')->get(),
             'changes' => MemberChange::where('member_id', $member->id)->with('adminUser')->latest()->get(),
             'users' => User::query()->orderBy('alias')->get(),
         ]);
@@ -141,13 +152,15 @@ class MemberController
             'fee_category_id' => ['nullable', 'exists:fee_categories,id'],
             'joined_at' => ['required', 'date'],
             'left_at' => ['nullable', 'date'],
+            'club_roles' => ['array'],
+            'club_roles.*' => ['integer', 'distinct', 'exists:club_roles,id'],
             'notiz' => ['nullable', 'string', 'max:5000'],
         ]);
 
         $leftAt = $validated['left_at'] ?? null;
-        unset($validated['left_at']);
+        unset($validated['left_at'], $validated['club_roles']);
 
-        $before = $member->toArray();
+        $before = $member->auditSnapshot();
         $departs = $before['left_at'] === null && $leftAt !== null;
 
         DB::transaction(function () use ($request, $member, $validated, $before, $leftAt, $departs) {
@@ -191,7 +204,7 @@ class MemberController
             return response()->json(['message' => __('members::admin.members.anonymize_field_locked')], 422);
         }
 
-        $before = $member->toArray();
+        $before = $member->auditSnapshot();
         $departs = $validated['field'] === 'left_at' && $before['left_at'] === null && $validated['value'] !== null;
 
         try {
@@ -251,7 +264,7 @@ class MemberController
             return redirect()->route('members.edit', $member)->withErrors($validator);
         }
 
-        $before = $member->toArray();
+        $before = $member->auditSnapshot();
 
         DB::transaction(function () use ($member, $before) {
             $member->update([
@@ -264,6 +277,7 @@ class MemberController
                 'city' => null,
                 'nuliga_id' => null,
                 'user_id' => null,
+                'notiz' => null,
                 'anonymized_at' => now(),
             ]);
             $this->logChange($member, 'anonymized', $before);
@@ -280,7 +294,7 @@ class MemberController
             'admin_user_id' => auth()->id(),
             'action' => $action,
             'before' => $before,
-            'after' => $member->fresh()->toArray(),
+            'after' => $member->fresh()->auditSnapshot(),
         ]);
     }
 }

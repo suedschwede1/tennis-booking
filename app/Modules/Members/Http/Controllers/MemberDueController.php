@@ -9,6 +9,7 @@ use App\Modules\Members\Models\FeeCategoryRate;
 use App\Modules\Members\Models\FiscalYear;
 use App\Modules\Members\Models\Member;
 use App\Modules\Members\Models\MemberDue;
+use App\Modules\Members\Services\DueGeneration;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -43,8 +44,8 @@ class MemberDueController
         $statusFilter = $request->string('status')->value();
         if (in_array($statusFilter, MemberDue::STATUSES, true)) {
             match ($statusFilter) {
-                'bezahlt' => $duesQuery->where('status', 'bezahlt'),
-                'ausstehend' => $duesQuery->where('status', 'ausstehend')
+                'bezahlt' => $duesQuery->paid(),
+                'ausstehend' => $duesQuery->open()->where('status', 'ausstehend')
                     ->where(fn ($q) => $q->whereNull('faellig_am')->orWhere('faellig_am', '>=', now()->toDateString())),
                 'ueberfaellig' => $duesQuery->overdue(),
             };
@@ -122,44 +123,12 @@ class MemberDueController
         $fiscalYearId = (int) $validated['fiscal_year_id'];
         $newFiscalYear = FiscalYear::findOrFail($fiscalYearId);
 
-        $existingMemberIds = MemberDue::where('fiscal_year_id', $fiscalYearId)->pluck('member_id');
-
-        $created = 0;
-
-        Member::query()
-            ->active()
-            ->whereNotIn('id', $existingMemberIds)
-            ->each(function (Member $member) use ($fiscalYearId, $newFiscalYear, &$created) {
-                // "Last year's category" assumes fiscal years are created in chronological
-                // order, so the highest fiscal_year_id is the most recent one.
-                $lastDue = $member->dues()->latest('fiscal_year_id')->first();
-
-                if (! $lastDue) {
-                    return;
-                }
-
-                $rate = FeeCategoryRate::where('fee_category_id', $lastDue->fee_category_id)
-                    ->where('fiscal_year_id', $fiscalYearId)
-                    ->first();
-
-                if (! $rate) {
-                    return;
-                }
-
-                MemberDue::create([
-                    'member_id' => $member->id,
-                    'fiscal_year_id' => $fiscalYearId,
-                    'fee_category_id' => $lastDue->fee_category_id,
-                    'amount' => $rate->amount,
-                    'status' => 'ausstehend',
-                    'faellig_am' => $newFiscalYear->faellig_am ?? $newFiscalYear->starts_on,
-                ]);
-
-                $created++;
-            });
+        $report = app(DueGeneration::class)->run($newFiscalYear, ! $request->boolean('preview'));
 
         return redirect()->route('members.dues.index', ['fiscal_year_id' => $fiscalYearId])
-            ->with('status', __('members::admin.dues.generated', ['count' => $created]));
+            ->with('generationReport', $report)
+            ->with('generationPreview', $request->boolean('preview'))
+            ->with('status', __('members::admin.dues.generated', ['count' => collect($report)->where('reason', 'created')->count()]));
     }
 
     /** Markiert alle ausgewählten Beitragszeilen in einem Schritt als bezahlt, optional bis zu einem gewählten Fiskaljahr im Voraus. */
@@ -226,6 +195,8 @@ class MemberDueController
 
         try {
             $due->update([$validated['field'] => $validated['value']]);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => $e->validator->errors()->first()], 422);
         } catch (\Throwable $e) {
             report($e);
 

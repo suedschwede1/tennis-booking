@@ -48,7 +48,7 @@ class MemberPrivacyRegressionTest extends TestCase
     {
         $cases = [];
         foreach (['web', 'rest', 'mcp'] as $entry) {
-            foreach (['firstname' => 'Restored', 'lastname' => 'Identity', 'email' => 'restored@example.test', 'phone' => '123456', 'street' => 'Identity street', 'zip' => '1000', 'city' => 'Identity city', 'nuliga_id' => 123456, 'user_id' => 1] as $field => $value) {
+            foreach (['firstname' => 'Restored', 'lastname' => 'Identity', 'email' => 'restored@example.test', 'phone' => '123456', 'street' => 'Identity street', 'zip' => '1000', 'city' => 'Identity city', 'nuliga_id' => 123456, 'user_id' => 1, 'notiz' => 'Restored personal note'] as $field => $value) {
                 $cases[$entry.' '.$field] = [$entry, $field, $value];
             }
         }
@@ -114,7 +114,7 @@ class MemberPrivacyRegressionTest extends TestCase
         Sanctum::actingAs(User::factory()->create(['status' => 'admin']));
         foreach ([false, true] as $anonymized) {
             $member = Member::factory()->create(['status' => $anonymized ? 'ausgetreten' : 'ruhend', 'left_at' => $anonymized ? now()->subYears(5)->toDateString() : null, 'anonymized_at' => $anonymized ? now() : null]);
-            $data = [...$this->payload($member), 'notiz' => 'Accounting reviewed'];
+            $data = [...$this->payload($member), 'gender' => 'd'];
             if ($entry === 'web') {
                 $this->put('/members/'.$member->id, $data)->assertRedirect()->assertSessionHasNoErrors();
             } elseif ($entry === 'rest') {
@@ -123,7 +123,7 @@ class MemberPrivacyRegressionTest extends TestCase
                 app(UpdateMemberTool::class)->handle(new McpRequest(['member_id' => $member->id, ...$data]));
             }
             $this->assertSame($anonymized ? 'ausgetreten' : 'ruhend', $member->fresh()->status);
-            $this->assertSame('Accounting reviewed', $member->fresh()->notiz);
+            $this->assertSame('d', $member->fresh()->gender);
         }
     }
 

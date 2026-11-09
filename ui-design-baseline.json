@@ -25,12 +25,6 @@
             "source": "background: #f3eadc;",
             "count": 1
         },
-        "01b61794515021135738ac0d4929163cfc473fe16fb3591dd2bea17a8838a03d": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "STY-01",
-            "source": "<body style=\"font-family: var(--font-body)\">",
-            "count": 1
-        },
         "0201bb009fb40884d0b826fc996fe3d383621a4003fd6f71b4e6eb4bee754468": {
             "file": "public/css/booking.css",
             "rule": "CLR-01",
@@ -53,12 +47,6 @@
             "file": "public/css/booking.css",
             "rule": "CLR-01",
             "source": ".admin-table thead th { background: #eee; color: #547B97; font-weight: 700; }",
-            "count": 1
-        },
-        "026fc33d79beffc9261a2f011e40a07a40bd0bd8eacfcb4ece08d92d9e829c2e": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "CLR-01",
-            "source": "<a href=\"{{ route('calendar.index') }}\" onmouseover=\"this.style.color='#7fb3e8';\" onmouseout=\"this.style.color='#4d8fdb';\" style=\"display:block; padding:14px 14px 10px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:8px; font-family:var(--font-body); font-size:16px; font-weight:600; text-decoration:none; color:#4d8fdb; transition:color 0.15s ease;\">",
             "count": 1
         },
         "02bce0f21bd68d4de7e1070c77e88c7678d6f192944bbafa23d37fbeecf00172": {
@@ -115,12 +103,6 @@
             "source": "--color-accent-700: oklch(43% 0.168 35);",
             "count": 1
         },
-        "041449f241604ab08ccd2554eb0e3b531ce2833856c9b5c182be2ec2c195c3a8": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "STY-01",
-            "source": "<div style=\"margin-top:auto; padding:14px 14px 10px; border-top:1px solid rgba(255,255,255,0.08);\">",
-            "count": 1
-        },
         "0418c46e01098860f8f46af01dd21ab2eb17a9fa1c1809822737052459bf2821": {
             "file": "resources/views/admin/config/edit.blade.php",
             "rule": "CLR-01",
@@ -138,12 +120,6 @@
             "rule": "CLR-01",
             "source": "<span class=\"text-xs font-semibold uppercase tracking-wide text-[#6a6e73]\">{{ __('booking.admin.cfg.singular') }}</span>",
             "count": 2
-        },
-        "049bc590b0c7eac49113280bf07ff14848d7e03f060e475f5e14e177a76195a2": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "CLR-03",
-            "source": "<div style=\"padding:14px 14px 10px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:8px;\">",
-            "count": 1
         },
         "05916cadd94ad10dec5319fc234e58e1ec3a9cb5ba82581a59869ed19bb02c66": {
             "file": "resources/views/admin/users/index.blade.php",
@@ -186,12 +162,6 @@
             "rule": "CLR-01",
             "source": "<span class=\"text-sm text-[#6a6e73]\">{{ __('booking.admin.users.login_history_risk_score') }}: <strong class=\"text-[#151515]\">{{ $riskScore }}</strong></span>",
             "count": 1
-        },
-        "061cf678b0a2a2b2da76271c5f74048d4739555c6fed9307d45b23a09b46eb30": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "TYP-01",
-            "source": "<span style=\"font-family:var(--font-body); font-size:10px; color:#6a6e73; font-weight:600; text-transform:uppercase; letter-spacing:0.08em;\">",
-            "count": 2
         },
         "06480119afcd1246c078b24a05149221f995836760db7a2e57c363f4979e156f": {
             "file": "resources/views/admin/events/_form.blade.php",
@@ -552,12 +522,6 @@
             "rule": "STY-01",
             "source": "<body class=\"min-h-screen bg-[#f0ede6] flex flex-col\" style=\"font-family: var(--font-body)\">",
             "count": 1
-        },
-        "120aaa132031c419cc07efacf80786ff1a4768f589607887f585d05cada50a2d": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "CLR-01",
-            "source": "<a href=\"{{ route($item['route']) }}\" onmouseover=\"if (!this.dataset.active) { this.style.background='#26292e'; this.style.color='#ffffff'; }\" onmouseout=\"if (!this.dataset.active) { this.style.background='transparent'; this.style.color='#b2b6bd'; }\" data-active=\"{{ $active ? '1' : '' }}\" style=\"display:block; padding:12px 14px 12px {{ $active ? '11px' : '17px' }}; font-family:var(--font-body); font-size:16px; text-decoration:none; transition:background 0.15s ease, color 0.15s ease; color:{{ $active ? '#ffffff' : '#b2b6bd' }}; font-weight:{{ $active ? '700' : '400' }}; background:{{ $active ? '#34363b' : 'transparent' }}; border-left:{{ $active ? '3px solid #0066cc' : '3px solid transparent' }};\">",
-            "count": 2
         },
         "1232782fc8a378120911d4947fbf33cbb05c02e01acbe8d205c18b4e728553c1": {
             "file": "public/css/booking.css",
@@ -1105,12 +1069,6 @@
             "source": "<label class=\"text-xs font-semibold uppercase tracking-wide text-[#6a6e73]\" for=\"cf-registration-intro\">{{ __('booking.admin.cfg.registration_intro') }}</label>",
             "count": 1
         },
-        "2553fdc7317195b9ad3cd01c1e16533c55b1477c77374a55655e957dca70ab7f": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "CLR-01",
-            "source": "<header class=\"flex items-center justify-between border-b border-[#e7e3da] bg-white px-6 py-4\">",
-            "count": 1
-        },
         "265a7396143fb2392edd4241ccfda583d7e63787da671b2391dd5f8bd9b55aa4": {
             "file": "resources/views/admin/config/edit.blade.php",
             "rule": "CLR-01",
@@ -1235,12 +1193,6 @@
             "file": "public/css/booking.css",
             "rule": "CLR-01",
             "source": "background: #fde8e1;",
-            "count": 1
-        },
-        "28bce5f175a61d9103e7f5709dc2e8601ef1ff563d259154e22ae822989548bf": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "CLR-01",
-            "source": "<aside style=\"width:180px; height:100vh; position:sticky; top:0; overflow-y:auto; background:#151515; flex-shrink:0; display:flex; flex-direction:column;\">",
             "count": 1
         },
         "29df8ca263a754a048946bf8dd06fb9b84df4b928ad2b1c70379f4e779d9bfc4": {
@@ -1975,12 +1927,6 @@
             "source": "<dt class=\"text-xs font-semibold uppercase tracking-wide text-[#6a6e73] w-32 shrink-0\">{{ __('booking.admin.common.status') }}</dt>",
             "count": 1
         },
-        "45c58f3aea5f5e29b7332f216f0e111c494a2348612385bb18ec3d9f29f46fea": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "CLR-01",
-            "source": "<div class=\"flex min-h-screen bg-[#f0f0f0]\">",
-            "count": 1
-        },
         "45fdde6c73d3362dee9490ddb36082dfeb919ebc4fde35c62e9ceb5de4aa05c5": {
             "file": "resources/css/app.css",
             "rule": "CLR-01",
@@ -2028,12 +1974,6 @@
             "rule": "CLR-01",
             "source": "<input type=\"date\" id=\"admin-booking-date-end\" name=\"date_end\" value=\"{{ old('date_end', $repeatEndDate) }}\" class=\"w-full h-9 rounded-[6px] border border-[#c7c7c7] bg-white px-3 text-sm text-[#151515] outline-none focus:border-[#151515]\">",
             "count": 2
-        },
-        "489137a1c66bc07d1eca449e12b2d8a586d7c34d56ff04c416960cf095faf51a": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "STY-01",
-            "source": "<h1 class=\"mt-1 text-lg font-bold text-[#151515]\" style=\"font-family: var(--font-display)\">@yield('admin-title', __('members::admin.dashboard.title'))</h1>",
-            "count": 1
         },
         "48f4aade622b7bba07b566bdd4aad5cc3d7ca6b3a203c2dc83df5a549cc51f5f": {
             "file": "resources/views/admin/database/index.blade.php",
@@ -2143,12 +2083,6 @@
             "source": "<label class=\"text-xs font-semibold uppercase tracking-wide text-[#6a6e73]\" for=\"cf-quotes\">{{ __('booking.admin.quotes_enabled') }}</label>",
             "count": 1
         },
-        "4bcbf625aba47db79855abdab39f8c8d00ff39d165768c70519157ab5621784d": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "CLR-01",
-            "source": "<a href=\"{{ route($item['route']) }}\" onmouseover=\"if (!this.dataset.active) { this.style.background='#26292e'; this.style.color='#ffffff'; }\" onmouseout=\"if (!this.dataset.active) { this.style.background='transparent'; this.style.color='#b2b6bd'; }\" data-active=\"{{ $active ? '1' : '' }}\" style=\"display:block; padding:12px 14px 12px {{ $active ? '11px' : '17px' }}; font-family:var(--font-body); font-size:16px; text-decoration:none; transition:background 0.15s ease, color 0.15s ease; color:{{ $active ? '#ffffff' : '#b2b6bd' }}; font-weight:{{ $active ? '700' : '400' }}; background:{{ $active ? '#34363b' : 'transparent' }}; border-left:{{ $active ? '3px solid #0066cc' : '3px solid transparent' }};\">",
-            "count": 2
-        },
         "4be276494d3378e37ccc213079a6d4b7361d913b4c68035693ff5bdac115542a": {
             "file": "resources/views/admin/squares/_form.blade.php",
             "rule": "CLR-01",
@@ -2196,12 +2130,6 @@
             "rule": "STY-01",
             "source": "<nav style=\"flex:1; padding:6px 0;\">",
             "count": 1
-        },
-        "4d7c4b89c0c4db7b1dbd21f4dd7926287b650af2ce0d1c247f829f9a184dcaee": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "STY-01",
-            "source": "<span style=\"font-family:var(--font-body); font-size:10px; color:#6a6e73; font-weight:600; text-transform:uppercase; letter-spacing:0.08em;\">",
-            "count": 2
         },
         "4d7fcb108382223e25949f482944c956d9f0b4133135c27dce90e447bbe46c51": {
             "file": "public/css/booking.css",
@@ -2353,12 +2281,6 @@
             "source": "<button type=\"submit\" class=\"bg-[#bf4316] hover:bg-[#9e3412] text-white text-sm font-medium px-5 py-2 rounded transition-colors\">{{ __('booking.admin.common.save') }}</button>",
             "count": 1
         },
-        "543399d52ff2e6a9879c4d5f3df9ddca0cf7ddebad170f10dec08f54001e0630": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "STY-01",
-            "source": "<a href=\"{{ route($item['route']) }}\" onmouseover=\"if (!this.dataset.active) { this.style.background='#26292e'; this.style.color='#ffffff'; }\" onmouseout=\"if (!this.dataset.active) { this.style.background='transparent'; this.style.color='#b2b6bd'; }\" data-active=\"{{ $active ? '1' : '' }}\" style=\"display:block; padding:12px 14px 12px {{ $active ? '11px' : '17px' }}; font-family:var(--font-body); font-size:16px; text-decoration:none; transition:background 0.15s ease, color 0.15s ease; color:{{ $active ? '#ffffff' : '#b2b6bd' }}; font-weight:{{ $active ? '700' : '400' }}; background:{{ $active ? '#34363b' : 'transparent' }}; border-left:{{ $active ? '3px solid #0066cc' : '3px solid transparent' }};\">",
-            "count": 2
-        },
         "54868ba3a26b8157119c77a3fdccbdfda4bf97234c48ea781751e11abe996a7b": {
             "file": "resources/css/calendar-grid.css",
             "rule": "CLR-01",
@@ -2489,12 +2411,6 @@
             "file": "resources/views/components/layout/header.blade.php",
             "rule": "CLR-01",
             "source": "<span class=\"font-bold text-[#151515]\">{{ strtoupper($loc) }}</span>",
-            "count": 1
-        },
-        "5a341a69eac0909aba1734652d3a13f694f6a00a4d73df59968a0b8da80d21fd": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "STY-01",
-            "source": "<nav style=\"flex:1; padding:6px 0; display:flex; flex-direction:column;\">",
             "count": 1
         },
         "5a7abd1f9d5b0f0232ba8471178fd6bcbefd34f1d2a41255f1e3271ea2b30b26": {
@@ -3007,12 +2923,6 @@
             "source": "outline: 2px solid #151515;",
             "count": 1
         },
-        "67fefda878657534adecbc192a55d9a1e8cd3b60c1a5f9ac2833d3f683dc30b3": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "TYP-02",
-            "source": "<link href=\"https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@600;700&family=Red+Hat+Text:wght@400;500;600&display=swap\" rel=\"stylesheet\">",
-            "count": 1
-        },
         "681150a1ddcfd53b0c64fab78e1f38fa8b715c5323e1f2fc1de5e3e463bce9a9": {
             "file": "resources/css/app.css",
             "rule": "TYP-02",
@@ -3511,12 +3421,6 @@
             "source": "<button type=\"submit\" form=\"admin-booking-cancel\" class=\"inline-flex h-10 items-center rounded-[6px] border border-[#d4d4d4] bg-white px-5 text-sm text-[#151515] transition-colors hover:bg-[#f7f7f7]\">{{ __('booking.admin.bookings.cancel_booking') }}</button>",
             "count": 1
         },
-        "784590e7d01e078e0aa6d2d06abd67d86529c916a50fc87193fba93c95d7a488": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "STY-01",
-            "source": "<div style=\"padding:14px 14px 10px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:8px;\">",
-            "count": 1
-        },
         "7868553d5c373330cbb61ec764364b5c91fb5524d90667e832f937528bf777e3": {
             "file": "resources/views/admin/database/index.blade.php",
             "rule": "CLR-01",
@@ -3541,22 +3445,10 @@
             "source": "background: linear-gradient(180deg, #ffffff 0%, #fcfcfc 100%);",
             "count": 1
         },
-        "791db8fa6a5e8578aab433a9754637bd16651f1c547eb9f115435903ceffac6f": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "CLR-03",
-            "source": "<div style=\"margin-top:auto; padding:14px 14px 10px; border-top:1px solid rgba(255,255,255,0.08);\">",
-            "count": 1
-        },
         "79298439e295a60216d171ca227f5569045edf4aa640d30458640bcce07cbd0b": {
             "file": "resources/views/components/calendar/modals.blade.php",
             "rule": "CLR-01",
             "source": "<button type=\"submit\" class=\"w-full bg-[#bf4316] hover:bg-[#9e3412] text-white text-sm font-medium py-2 rounded transition-colors\">{{ __('booking.modal.save_event') }}</button>",
-            "count": 1
-        },
-        "7958fa63cbbe11bdf02d085eb0be32765328ce45390e8ea3094dab98650a2775": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "CLR-01",
-            "source": "<p class=\"text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6a6e73]\">{{ __('booking.nav.members') }}</p>",
             "count": 1
         },
         "79722b8a0c6ca9443dca185dcafd9afa39931ca8af57622db9973e9505d1a518": {
@@ -3990,12 +3882,6 @@
             "rule": "CLR-01",
             "source": "background: #f8f6f2;",
             "count": 1
-        },
-        "8828c1984d889b61fa3e5b6ee94687f3319901a57237038a33050b178056fe09": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "CLR-01",
-            "source": "<span style=\"font-family:var(--font-body); font-size:10px; color:#6a6e73; font-weight:600; text-transform:uppercase; letter-spacing:0.08em;\">",
-            "count": 2
         },
         "8848913d62edfaf46c7f7e67e6dae356b969c13de26a171f2dc252bce46aa4b8": {
             "file": "resources/css/app.css",
@@ -4487,12 +4373,6 @@
             "file": "resources/views/admin/config/edit.blade.php",
             "rule": "CLR-01",
             "source": "class=\"w-full border border-[#d1cbc0] rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#bf4316] focus:border-transparent\">{{ $values['registration_success'] }}</textarea>",
-            "count": 1
-        },
-        "9857ca065753595d8f2c8d578fbae93481de614ccb82a8a8cfc660238939c446": {
-            "file": "app/Modules/Members/resources/views/mail/index.blade.php",
-            "rule": "CLR-01",
-            "source": "<tr><td colspan=\"5\" class=\"text-[#6a6e73]\">{{ __('members::admin.mail.no_history') }}</td></tr>",
             "count": 1
         },
         "987915f867d87c609ca54015064b6edc30d75c54e709f707c86c08e2ea3c0644": {
@@ -5113,12 +4993,6 @@
             "source": ".success-message { background: #5f8a3b; }",
             "count": 1
         },
-        "ac0b8c297ee47f56e61283a188172ffac440da443faa5cfbac9cc3d0a5d24abd": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "CLR-01",
-            "source": "<a href=\"{{ route($item['route']) }}\" onmouseover=\"if (!this.dataset.active) { this.style.background='#26292e'; this.style.color='#ffffff'; }\" onmouseout=\"if (!this.dataset.active) { this.style.background='transparent'; this.style.color='#b2b6bd'; }\" data-active=\"{{ $active ? '1' : '' }}\" style=\"display:block; padding:12px 14px 12px {{ $active ? '11px' : '17px' }}; font-family:var(--font-body); font-size:16px; text-decoration:none; transition:background 0.15s ease, color 0.15s ease; color:{{ $active ? '#ffffff' : '#b2b6bd' }}; font-weight:{{ $active ? '700' : '400' }}; background:{{ $active ? '#34363b' : 'transparent' }}; border-left:{{ $active ? '3px solid #0066cc' : '3px solid transparent' }};\">",
-            "count": 2
-        },
         "ac990411d9f559ebf75c1df7d87f30eb05e50129ce5e18b540bb5c832d27f185": {
             "file": "resources/views/admin/bookings/edit.blade.php",
             "rule": "CLR-01",
@@ -5467,12 +5341,6 @@
             "source": "class=\"inline-flex h-8 items-center rounded-[6px] border border-[#d4cec3] bg-white px-4 text-[13px] font-medium text-[#6a6e73] transition-colors hover:border-[#bf4316] hover:text-[#bf4316]\"",
             "count": 2
         },
-        "b86bb2ae8a6b246b5ea2ce05a64a490567079e2fca24ae935658f58764759f07": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "TYP-02",
-            "source": "<link href=\"https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@600;700&family=Red+Hat+Text:wght@400;500;600&display=swap\" rel=\"stylesheet\">",
-            "count": 1
-        },
         "b876086717605497bacd06b6631c558a613585fe7882b25a1ecddf39921bf039": {
             "file": "public/css/booking.css",
             "rule": "CLR-01",
@@ -5502,12 +5370,6 @@
             "rule": "CLR-01",
             "source": "color: #fff;",
             "count": 6
-        },
-        "b9512d42bdbcadaeb26b1e031aba4901a0e34d8b1d0332b35f7c22130f5b2084": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "STY-01",
-            "source": "<aside style=\"width:180px; height:100vh; position:sticky; top:0; overflow-y:auto; background:#151515; flex-shrink:0; display:flex; flex-direction:column;\">",
-            "count": 1
         },
         "b9a3d7aba6f58111b161d3056687e27f1f7d485a6ee6e29b38fd23a55606aea3": {
             "file": "resources/views/components/layout/header.blade.php",
@@ -6097,12 +5959,6 @@
             "source": "color: #bf4316;",
             "count": 8
         },
-        "c947c7c4d82fa2d45689ead2e43fa984f0893e6d44b7042d01f9dc2c2ecad550": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "CLR-01",
-            "source": "<h1 class=\"mt-1 text-lg font-bold text-[#151515]\" style=\"font-family: var(--font-display)\">@yield('admin-title', __('members::admin.dashboard.title'))</h1>",
-            "count": 1
-        },
         "c94cbd496398bf12be0e0e597bddb1e6238e09a570b00b951279789efdeed511": {
             "file": "resources/css/app.css",
             "rule": "CLR-03",
@@ -6565,12 +6421,6 @@
             "source": "<p class=\"text-xs text-[#6a6e73]\">",
             "count": 1
         },
-        "d737d63f79008a12b9178d80def107082de4048f81a6f1078a534016adedbe9a": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "STY-01",
-            "source": "<a href=\"{{ route('calendar.index') }}\" onmouseover=\"this.style.color='#7fb3e8';\" onmouseout=\"this.style.color='#4d8fdb';\" style=\"display:block; padding:14px 14px 10px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:8px; font-family:var(--font-body); font-size:16px; font-weight:600; text-decoration:none; color:#4d8fdb; transition:color 0.15s ease;\">",
-            "count": 1
-        },
         "d7e6d7c0862c275dfd33087194464a3c1c45ecffff244fd672cd1cfe15cd2714": {
             "file": "resources/views/components/layout/admin-sidebar.blade.php",
             "rule": "CLR-01",
@@ -6781,12 +6631,6 @@
             "source": "<p class=\"text-xs text-[#6a6e73] mt-1\">{{ __('booking.admin.squares.max_active_bookings_hint') }}</p>",
             "count": 1
         },
-        "df7cdd0bc6a039c4acadf5ec95b4267fccae3b59e4e79ffc1bdb1f5d32b11998": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "CLR-01",
-            "source": "<div class=\"flex items-center gap-4 text-sm text-[#6a6e73]\">",
-            "count": 1
-        },
         "dfb341201083f059f1c8bd1c53e32307bddb3263874fb05bbcf3fa78b05b3fa3": {
             "file": "resources/views/components/layout/header.blade.php",
             "rule": "CLR-01",
@@ -6845,12 +6689,6 @@
             "file": "resources/views/admin/bookings/show.blade.php",
             "rule": "CLR-01",
             "source": "<td class=\"text-sm text-[#151515] px-4 py-3 border-b border-[#f0ede6]\">{{ $reservation->time_start }}</td>",
-            "count": 1
-        },
-        "e29d33bde19ec34c2553e978e13a6463bfff9f3e803ec65175e59b1337debb58": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "CLR-03",
-            "source": "<a href=\"{{ route('calendar.index') }}\" onmouseover=\"this.style.color='#7fb3e8';\" onmouseout=\"this.style.color='#4d8fdb';\" style=\"display:block; padding:14px 14px 10px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:8px; font-family:var(--font-body); font-size:16px; font-weight:600; text-decoration:none; color:#4d8fdb; transition:color 0.15s ease;\">",
             "count": 1
         },
         "e2a0e0cb32ea5dcdc69172bc2351ca604217cd1a9d1890bf3c4b347c4b2b4a8a": {
@@ -7307,12 +7145,6 @@
             "file": "resources/views/admin/bookings/edit.blade.php",
             "rule": "CLR-01",
             "source": "<label class=\"block text-[13px] font-medium text-[#151515]\" for=\"date\">{{ __('booking.admin.bookings.date_start') }}</label>",
-            "count": 2
-        },
-        "f2bb9d696cb6f040aa27978efc51d1c6d219ce019a0f3555647f71e737a25ed1": {
-            "file": "app/Modules/Members/resources/views/layout.blade.php",
-            "rule": "CLR-01",
-            "source": "<a href=\"{{ route($item['route']) }}\" onmouseover=\"if (!this.dataset.active) { this.style.background='#26292e'; this.style.color='#ffffff'; }\" onmouseout=\"if (!this.dataset.active) { this.style.background='transparent'; this.style.color='#b2b6bd'; }\" data-active=\"{{ $active ? '1' : '' }}\" style=\"display:block; padding:12px 14px 12px {{ $active ? '11px' : '17px' }}; font-family:var(--font-body); font-size:16px; text-decoration:none; transition:background 0.15s ease, color 0.15s ease; color:{{ $active ? '#ffffff' : '#b2b6bd' }}; font-weight:{{ $active ? '700' : '400' }}; background:{{ $active ? '#34363b' : 'transparent' }}; border-left:{{ $active ? '3px solid #0066cc' : '3px solid transparent' }};\">",
             "count": 2
         },
         "f310bff852e2a4c4cfb418e4bf13e2bcfa72a1be8bc6999c922f71f4cb851a6a": {

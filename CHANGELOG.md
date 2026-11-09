@@ -10,6 +10,9 @@ When adding an entry: describe the *why*/user-facing effect in one line, not the
 
 ## 2026-11-09
 
+- Keep member contribution status, annual filters and imported payments consistent; defer missing tariffs, generate first dues with a preview/report, and provide payment history with auditable reversals.
+- Preserve omitted REST member roles and departure dates, record role changes, redact anonymized notes including existing history, and expose validated bulk-mail queue/transport outcomes.
+- Make member management usable on phones and tablets with collapsible navigation and contained table scrolling; add regression coverage and a dry-run contribution reconciliation command.
 - Preserve irregular booking dates on edits, reject unsupported custom creation, and keep completed slots and the edited booking out of future-usage limits.
 - Protect the selected restore source from backup retention pruning and reject missing/corrupt gzip before changing data.
 - Redact anonymized identities from all history snapshots, repair existing records with a data migration, and enforce protected-field locks across web/REST/MCP and stale model instances.

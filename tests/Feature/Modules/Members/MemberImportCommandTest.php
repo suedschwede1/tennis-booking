@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules\Members;
 
 use App\Modules\Members\Models\FeeCategory;
+use App\Modules\Members\Models\FeeCategoryRate;
 use App\Modules\Members\Models\FiscalYear;
 use App\Modules\Members\Models\Member;
 use App\Modules\Members\Models\MemberDue;
@@ -15,6 +16,19 @@ use Tests\TestCase;
 class MemberImportCommandTest extends TestCase
 {
     use LazilyRefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // A missing rate is no longer a zero-price tariff. These import scenarios use configured rates.
+        foreach ([now()->year - 1, now()->year] as $year) {
+            $fiscalYear = FiscalYear::create(['name' => (string) $year, 'starts_on' => "$year-01-01", 'ends_on' => "$year-12-31"]);
+            foreach (['Vollzahler', 'Pensionisten'] as $name) {
+                $category = FeeCategory::firstOrCreate(['name' => $name]);
+                FeeCategoryRate::create(['fee_category_id' => $category->id, 'fiscal_year_id' => $fiscalYear->id, 'amount' => 120]);
+            }
+        }
+    }
 
     private function writeCsv(): string
     {
@@ -164,7 +178,7 @@ class MemberImportCommandTest extends TestCase
     #[Test]
     public function warns_about_unparsable_nuliga_id(): void
     {
-        $csv = <<<CSV
+        $csv = <<<'CSV'
         Name,Vorname,Mitgliedsart,MB ,Bemerkung,Email,Strasse,PLZ,Ort,Privat,Mobil,Geschlecht,GebDatum,ID-Nr,Alter,Reservierungssystem
         Muster,Anna,Vollmitglied,bezahlt 25,,anna@example.com,Teststr. 1,4400,Teststadt,,0650 1234567,weiblich,01.02.1980,NU123456,46,Ja
         CSV;
@@ -185,7 +199,7 @@ class MemberImportCommandTest extends TestCase
     #[Test]
     public function treats_a_zero_nuliga_id_as_missing_without_warning(): void
     {
-        $csv = <<<CSV
+        $csv = <<<'CSV'
         Name,Vorname,Mitgliedsart,MB ,Bemerkung,Email,Strasse,PLZ,Ort,Privat,Mobil,Geschlecht,GebDatum,ID-Nr,Alter,Reservierungssystem
         Muster,Anna,Vollmitglied,bezahlt 25,,anna@example.com,Teststr. 1,4400,Teststadt,,0650 1234567,weiblich,01.02.1980,0,46,Ja
         Alt,Bernd,Pensionist,bezahlt 25,,,Weg 2,4400,Teststadt,70 658,,maennlich,03.04.1950,0,76,Nein
@@ -204,7 +218,7 @@ class MemberImportCommandTest extends TestCase
     #[Test]
     public function warns_about_duplicate_nuliga_id_and_keeps_first(): void
     {
-        $csv = <<<CSV
+        $csv = <<<'CSV'
         Name,Vorname,Mitgliedsart,MB ,Bemerkung,Email,Strasse,PLZ,Ort,Privat,Mobil,Geschlecht,GebDatum,ID-Nr,Alter,Reservierungssystem
         Muster,Anna,Vollmitglied,bezahlt 25,,anna@example.com,Teststr. 1,4400,Teststadt,,0650 1234567,weiblich,01.02.1980,123456,46,Ja
         Alt,Bernd,Pensionist,bezahlt 25,,,Weg 2,4400,Teststadt,70 658,,maennlich,03.04.1950,123456,76,Nein

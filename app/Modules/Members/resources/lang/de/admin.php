@@ -3,6 +3,23 @@
 declare(strict_types=1);
 
 return [
+    'review' => [
+        'menu' => 'Menü',
+        'preview' => 'Vorschau anzeigen',
+        'generation_report' => 'Ergebnis der Beitragsvorschreibung',
+        'preview_hint' => 'Vorschau: Es wurden keine Beiträge angelegt.',
+        'reason_ready' => 'Wird erstellt',
+        'reason_created' => 'Erstellt',
+        'reason_existing' => 'Bereits vorhanden',
+        'reason_no_category' => 'Keine Beitragskategorie',
+        'reason_no_rate' => 'Kein Jahrestarif',
+        'reason_not_eligible' => 'Im Zieljahr nicht beitragsberechtigt',
+        'mail_status' => 'Versandstatus',
+        'mail_queued' => 'In Warteschlange',
+        'mail_submitted' => 'An Mailtransport übergeben',
+        'mail_failed' => 'Versand fehlgeschlagen',
+        'mail_unknown' => 'Historisch: Status unbekannt',
+    ],
     'members' => [
         'title' => 'Mitglieder',
         'new_member' => 'Neues Mitglied',
@@ -58,6 +75,12 @@ return [
         'anonymize_field_locked' => 'Feld gesperrt, da dieses Mitglied anonymisiert wurde.',
     ],
     'payments' => [
+        'title' => 'Zahlungshistorie',
+        'void' => 'Zahlung stornieren',
+        'voided' => 'Zahlung storniert',
+        'void_reason' => 'Stornogrund',
+        'empty' => 'Keine Zahlungen erfasst.',
+        'manual_hint' => 'Eine manuelle Bezahlt-Markierung ist keine erfasste Zahlung. Korrekturen gebuchter Zahlungen erfolgen über Storno und erneute Erfassung.',
         'new_payment' => 'Zahlung erfassen',
         'created' => 'Zahlung erfasst.',
         'amount' => 'Betrag (€)',
@@ -94,6 +117,8 @@ return [
         'rates_for' => 'Beitragssätze pro Fiskaljahr',
     ],
     'dues' => [
+        'payment_locked' => 'Zahlungsgebundene Beiträge zuerst über die Zahlungshistorie stornieren.',
+        'import_missing_rate' => 'Mitglied :member, Jahr :year: kein Tarif; Beitrag nicht angelegt. Nach Tarifpflege Import erneut ausführen.',
         'title' => 'Beiträge',
         'new' => 'Beitrag manuell anlegen',
         'member' => 'Mitglied',
@@ -149,6 +174,12 @@ return [
         'confirm_delete' => 'Diese Funktion wirklich löschen?',
     ],
     'mail' => [
+        'invalid_import_email' => 'CSV-Zeile :row: ungültige E-Mail-Adresse :email. Import nicht ausgeführt.',
+        'invalid_recipients' => 'Ungültige Empfängeradressen: :addresses. Bitte zuerst die Mitgliederdaten korrigieren.',
+        'no_recipients' => 'Die Auswahl enthält keine Empfänger.',
+        'sender_characters' => 'Der Absendername darf keine Emoji oder andere Vierbyte-Zeichen enthalten.',
+        'send_failed' => 'Versand fehlgeschlagen. Bitte Versandhistorie und Mailkonfiguration prüfen.',
+        'queued' => 'Rundmail für :count Empfänger eingereiht. Der Versandstatus steht in der Historie.',
         'title' => 'Mail',
         'config_title' => 'Mail-Einstellungen',
         'to_all' => 'Mail an alle Mitglieder',

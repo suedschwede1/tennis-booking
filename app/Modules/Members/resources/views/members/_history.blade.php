@@ -1,6 +1,9 @@
 @php
     $dateFields = ['birthdate', 'joined_at', 'left_at'];
     $fieldLabels = [
+        'club_roles' => __('members::admin.members.club_roles'),
+        'payment' => __('members::admin.payments.title'),
+        'due' => __('members::admin.dues.title'),
         'member_number' => __('members::admin.members.member_number'),
         'nuliga_id' => __('members::admin.members.nuliga_id'),
         'firstname' => __('members::admin.members.firstname'),

@@ -1,0 +1,43 @@
+/* Responsive module shell. Keep table overflow inside its own scroll region. */
+.members-admin {
+    --font-body: var(--font-tc-body);
+    --font-display: var(--font-tc-display);
+    --ui-orange: var(--color-clay);
+    --ui-orange-hover: var(--color-clay-hover);
+    --ui-orange-soft: var(--color-clay-soft);
+    --ui-text: var(--color-ink);
+    --ui-text-secondary: var(--color-ink-2);
+    --ui-text-muted: var(--color-ink-3);
+    --ui-bg: var(--color-ground);
+    --ui-surface: var(--color-surface);
+    --ui-border: var(--color-line);
+    --ui-shadow: none;
+    font-family: var(--font-tc-body);
+}
+.members-shell { display: grid; grid-template-columns: 180px minmax(0, 1fr); min-height: 100dvh; }
+.members-nav { background: var(--color-chrome); color: var(--color-chrome-ink); position: sticky; top: 0; height: 100dvh; overflow-y: auto; }
+.members-nav-link { display: flex; align-items: center; min-height: 46px; padding: 12px 16px; color: var(--color-chrome-ink); text-decoration: none; overflow-wrap: anywhere; border-left: 3px solid transparent; }
+.members-nav-link:hover { background: var(--color-ink-2); }
+.members-nav-link[aria-current] { background: var(--color-ink-2); border-left-color: var(--color-clay); font-weight: 700; }
+.members-main, .members-content, .members-admin .ui-card, .members-admin .ui-table-wrap { min-width: 0; max-width: 100%; }
+.members-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 24px; background: var(--color-surface); border-bottom: 1px solid var(--color-line); }
+.members-header h1 { font: 700 24px/26px var(--font-tc-display); }
+.members-content { padding: 24px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.members-admin .ui-page, .members-admin .ui-card-body, .members-admin .ui-form-shell { min-width: 0; max-width: 100%; }
+.members-admin .ui-table-wrap { overflow-x: auto; }
+.members-admin .ui-card { box-shadow: none; }
+.members-admin .ui-page-header h1 { overflow-wrap: anywhere; }
+.members-menu-toggle { display: none; }
+@media (max-width: 767px) {
+    .members-shell { grid-template-columns: minmax(0, 1fr); }
+    .members-nav { position: static; height: auto; display: none; }
+    .members-nav--open { display: block; }
+    .members-menu-toggle { display: inline-flex; }
+    .members-header, .members-content { padding: 16px; }
+    .members-admin .ui-grid-2, .members-admin .ui-grid-3 { grid-template-columns: minmax(0, 1fr); }
+    .members-admin .ui-field, .members-admin .ui-row > div, .members-admin .ui-form-panel { min-width: 0; max-width: 100%; width: 100%; }
+    .members-admin .ui-page-header > div { flex-wrap: wrap; }
+    .members-admin .ui-card-header { flex-wrap: wrap; gap: 12px; }
+    .members-admin .ui-btn, .members-admin .ui-input, .members-admin .ui-select { min-height: 52px; }
+    .members-admin .ui-form-shell { width: 100%; min-width: 0; }
+}

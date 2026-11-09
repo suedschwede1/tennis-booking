@@ -4,6 +4,8 @@
 <div class="ui-page">
     <div class="ui-page-header"><h1>{{ __('members::admin.dues.title') }}</h1></div>
 
+    @include('members::dues._generation-report')
+
     @if(session('status'))
         <div class="ui-card"><div class="ui-card-body">{{ session('status') }}</div></div>
     @endif
@@ -49,6 +51,7 @@
                         @endforeach
                     </select>
                 </div>
+                <x-ui.button type="submit" variant="secondary" name="preview" value="1">{{ __('members::admin.review.preview') }}</x-ui.button>
                 @php $defaultFiscalYear = $generateFiscalYears->firstWhere('id', $defaultFiscalYearId); @endphp
                 <button type="submit" class="ui-btn ui-btn-primary" x-text="label">{{ __('members::admin.dues.generate_for', ['year' => $defaultFiscalYear->name ?? '']) }}</button>
             </form>

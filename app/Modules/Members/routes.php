@@ -37,6 +37,7 @@ Route::middleware(['auth', 'can:admin.members'])
         Route::patch('members/dues/{due}/paid-through', [MemberDueController::class, 'markPaidThrough'])->name('members.dues.mark-paid-through');
 
         Route::get('members/{member}/payments/create', [PaymentController::class, 'create'])->name('members.payments.create');
+        Route::post('members/{member}/payments/{payment}/void', [PaymentController::class, 'void'])->name('members.payments.void');
         Route::post('members/{member}/payments', [PaymentController::class, 'store'])->name('members.payments.store');
 
         Route::patch('members/{member}/field', [MemberController::class, 'updateField'])->name('members.update-field');

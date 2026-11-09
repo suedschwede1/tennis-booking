@@ -8,5 +8,5 @@ return [
         glob(base_path('app/Modules/*/resources/views'), GLOB_ONLYDIR) ?: [],
         glob(base_path('Modules/*/resources/views'), GLOB_ONLYDIR) ?: []),
     // Migrated paths can never use legacy exceptions.
-    'migrated' => ['resources/views/components/ui/', 'resources/views/design/', 'resources/css/design-components.css'],
+    'migrated' => ['resources/views/components/ui/', 'resources/views/design/', 'resources/css/design-components.css', 'resources/css/members-admin.css', 'app/Modules/Members/resources/views/layout.blade.php'],
 ];

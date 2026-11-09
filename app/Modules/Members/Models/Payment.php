@@ -7,14 +7,22 @@ namespace App\Modules\Members\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $member_id
+ * @property string $amount
+ * @property Carbon $paid_at
+ * @property Carbon|null $voided_at
+ */
 class Payment extends Model
 {
-    protected $fillable = ['member_id', 'amount', 'paid_at', 'note'];
+    protected $fillable = ['member_id', 'amount', 'paid_at', 'note', 'voided_at', 'voided_by_user_id', 'void_reason'];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'paid_at' => 'date',
+        'voided_at' => 'datetime',
     ];
 
     public function member(): BelongsTo
@@ -22,6 +30,7 @@ class Payment extends Model
         return $this->belongsTo(Member::class);
     }
 
+    /** @return BelongsToMany<MemberDue, $this> */
     public function dues(): BelongsToMany
     {
         return $this->belongsToMany(MemberDue::class, 'payment_dues');

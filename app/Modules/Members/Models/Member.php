@@ -49,7 +49,7 @@ class Member extends Model
     public const STATUSES = ['aktiv', 'ruhend', 'ausgetreten'];
 
     /** Fields removed by anonymization; none may be restored by ordinary updates. */
-    public const ANONYMIZED_FIELDS = ['firstname', 'lastname', 'email', 'phone', 'street', 'zip', 'city', 'nuliga_id', 'user_id'];
+    public const ANONYMIZED_FIELDS = ['firstname', 'lastname', 'email', 'phone', 'street', 'zip', 'city', 'nuliga_id', 'user_id', 'notiz'];
 
     protected static function booted(): void
     {
@@ -61,6 +61,13 @@ class Member extends Model
                 });
             }
         });
+    }
+
+    /** Capture role names as well as IDs so later renames/deletions do not rewrite history. */
+    public function auditSnapshot(): array
+    {
+        return [...$this->attributesToArray(), 'club_roles' => $this->clubRoles()->orderBy('club_roles.id')->get()
+            ->map(fn (ClubRole $role): string => $role->name.' (#'.$role->id.')')->implode(', ')];
     }
 
     public function save(array $options = []): bool

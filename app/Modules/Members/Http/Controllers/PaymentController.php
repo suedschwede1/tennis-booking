@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Members\Http\Controllers;
 
 use App\Modules\Members\Models\Member;
+use App\Modules\Members\Models\MemberChange;
 use App\Modules\Members\Models\MemberDue;
 use App\Modules\Members\Models\Payment;
 use Illuminate\Contracts\View\View;
@@ -25,6 +26,31 @@ class PaymentController
         return view('members::payments.create', ['member' => $member, 'openDues' => $openDues]);
     }
 
+    public function void(Request $request, Member $member, Payment $payment): RedirectResponse
+    {
+        abort_unless((int) $payment->member_id === $member->id, 404);
+        $validated = $request->validate(['reason' => ['required', 'string', 'max:255']]);
+        DB::transaction(function () use ($member, $payment, $validated): void {
+            // Match the posting lock order: dues first, then payment.
+            $dues = $payment->dues()->orderBy('member_dues.id')->lockForUpdate()->get();
+            $locked = Payment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
+            if ($locked->voided_at !== null) {
+                return;
+            }
+            $locked->update(['voided_at' => now(), 'voided_by_user_id' => auth()->id(), 'void_reason' => $validated['reason']]);
+            foreach ($dues as $due) {
+                if (! $due->payments()->exists()) {
+                    $due->update(['status' => 'ausstehend', 'bezahlt_bis_fiscal_year_id' => null]);
+                }
+            }
+            MemberChange::create(['member_id' => $member->id, 'admin_user_id' => auth()->id(), 'action' => 'updated',
+                'before' => ['payment' => '#'.$locked->id.' / '.$locked->amount],
+                'after' => ['payment' => '#'.$locked->id.' / '.__('members::admin.payments.voided').' / '.$validated['reason']]]);
+        });
+
+        return redirect()->route('members.edit', $member)->with('status', __('members::admin.payments.voided'));
+    }
+
     public function store(Request $request, Member $member): RedirectResponse
     {
         $validated = $request->validate([
@@ -34,6 +60,7 @@ class PaymentController
             'member_due_ids' => ['required', 'array', 'min:1'],
             'member_due_ids.*' => [
                 'integer',
+                'distinct',
                 'exists:member_dues,id,member_id,'.$member->id,
                 function (string $attribute, mixed $value, callable $fail): void {
                     $isAlreadyPaid = MemberDue::query()
@@ -69,16 +96,13 @@ class PaymentController
         DB::transaction(function () use ($validated, $member, $dueIds): void {
             // Re-check inside the transaction (with the due rows locked) so two
             // concurrent submissions cannot allocate the same due twice.
-            $alreadyPaid = MemberDue::query()
-                ->whereKey($dueIds)
-                ->paid()
-                ->lockForUpdate()
-                ->exists();
-
-            if ($alreadyPaid) {
-                throw ValidationException::withMessages([
-                    'member_due_ids' => __('members::admin.payments.due_already_paid'),
-                ]);
+            $dues = MemberDue::whereKey($dueIds)->where('member_id', $member->id)->orderBy('id')->lockForUpdate()->get();
+            if ($dues->count() !== count($dueIds) || $dues->contains(fn (MemberDue $due): bool => $due->isPaid())) {
+                throw ValidationException::withMessages(['member_due_ids' => __('members::admin.payments.due_already_paid')]);
+            }
+            $expected = $dues->sum(fn (MemberDue $due): int => (int) round((float) $due->amount * 100));
+            if ($expected !== (int) round((float) $validated['amount'] * 100)) {
+                throw ValidationException::withMessages(['amount' => __('members::admin.payments.amount_mismatch', ['sum' => number_format($expected / 100, 2, ',', '.')])]);
             }
 
             $payment = Payment::create([
@@ -91,6 +115,8 @@ class PaymentController
             $payment->dues()->attach($dueIds);
 
             MemberDue::whereKey($dueIds)->update(['status' => 'bezahlt']);
+            MemberChange::create(['member_id' => $member->id, 'admin_user_id' => auth()->id(), 'action' => 'updated',
+                'before' => ['payment' => null], 'after' => ['payment' => '#'.$payment->id.' / '.$payment->amount.' / '.$payment->paid_at->toDateString()]]);
         });
 
         return redirect()->route('members.edit', $member)

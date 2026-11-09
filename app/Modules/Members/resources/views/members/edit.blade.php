@@ -5,6 +5,7 @@
     <div class="ui-page-header flex flex-wrap items-center justify-between gap-4">
         <h1>{{ $member->fullName() }}</h1>
         <div class="flex items-center gap-2">
+            <a href="{{ route('members.payments.create', $member) }}" class="tc-button tc-button--secondary">{{ __('members::admin.payments.new_payment') }}</a>
             @if($member->left_at !== null && $member->anonymized_at === null)
                 <form method="POST" action="{{ route('members.anonymize', $member) }}" onsubmit="const c = prompt({{ Js::from(__('members::admin.members.anonymize_confirmation_label')) }}); if (c === null) return false; this.querySelector('input[name=confirmation]').value = c;">
                     @csrf
@@ -169,6 +170,7 @@
         </div>
     @endif
 
+    @include('members::payments._history')
     @include('members::members._history', ['changes' => $changes])
 </div>
 

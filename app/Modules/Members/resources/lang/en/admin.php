@@ -3,6 +3,23 @@
 declare(strict_types=1);
 
 return [
+    'review' => [
+        'menu' => 'Menu',
+        'preview' => 'Preview',
+        'generation_report' => 'Due generation report',
+        'preview_hint' => 'Preview: no dues were created.',
+        'reason_ready' => 'Ready to create',
+        'reason_created' => 'Created',
+        'reason_existing' => 'Already exists',
+        'reason_no_category' => 'No fee category',
+        'reason_no_rate' => 'No annual rate',
+        'reason_not_eligible' => 'Not eligible in target year',
+        'mail_status' => 'Send status',
+        'mail_queued' => 'Queued',
+        'mail_submitted' => 'Submitted to mail transport',
+        'mail_failed' => 'Sending failed',
+        'mail_unknown' => 'Historical: status unknown',
+    ],
     'members' => [
         'title' => 'Members',
         'new_member' => 'New member',
@@ -57,6 +74,12 @@ return [
         'anonymize_field_locked' => 'Field locked because this member has been anonymized.',
     ],
     'payments' => [
+        'title' => 'Payment history',
+        'void' => 'Void payment',
+        'voided' => 'Payment voided',
+        'void_reason' => 'Reason for voiding',
+        'empty' => 'No payments recorded.',
+        'manual_hint' => 'A manual paid marker is not a recorded payment. Correct recorded payments by voiding and re-entering them.',
         'new_payment' => 'Record payment',
         'created' => 'Payment recorded.',
         'amount' => 'Amount (€)',
@@ -93,6 +116,8 @@ return [
         'rates_for' => 'Rates per fiscal year',
     ],
     'dues' => [
+        'payment_locked' => 'Void the associated payment in payment history before changing this due.',
+        'import_missing_rate' => 'Member :member, year :year: no rate; due not created. Configure the rate and rerun the import.',
         'title' => 'Dues',
         'new' => 'Create due manually',
         'member' => 'Member',
@@ -148,6 +173,12 @@ return [
         'confirm_delete' => 'Really delete this role?',
     ],
     'mail' => [
+        'invalid_import_email' => 'CSV row :row: invalid email address :email. Import was not executed.',
+        'invalid_recipients' => 'Invalid recipient addresses: :addresses. Correct member records before sending.',
+        'no_recipients' => 'The selection contains no recipients.',
+        'sender_characters' => 'The sender name must not contain emoji or other four-byte characters.',
+        'send_failed' => 'Sending failed. Check send history and mail configuration.',
+        'queued' => 'Mail queued for :count recipients. See history for sending status.',
         'title' => 'Mail',
         'config_title' => 'Mail Settings',
         'to_all' => 'Mail to all members',
